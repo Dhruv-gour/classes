@@ -67,7 +67,7 @@ self.addEventListener('install', (event) => {
         <p class="footer">Chaturvedi Classes - Excellence in Education</p>
     </div>
     <script>
-        let retryCount=0;let retryInterval=null;const lastUrl=localStorage.getItem('lastVisitedUrl')||'classes.html';
+        let retryCount=0;let retryInterval=null;const lastUrl=localStorage.getItem('lastVisitedUrl')||'index.html';
         function checkInternet(){if(!navigator.onLine)return false;return fetch('https://www.google.com/favicon.ico?'+Date.now(),{method:'HEAD',mode:'no-cors',cache:'no-cache'}).then(()=>true).catch(()=>false)}
         async function handleRetry(){retryCount++;document.getElementById('retryCount').textContent=retryCount;const hasInternet=await checkInternet();if(hasInternet)window.location.href=lastUrl}
         function startAutoRetry(){checkInternet().then(hasInternet=>{if(hasInternet)window.location.href=lastUrl});retryInterval=setInterval(()=>{checkInternet().then(hasInternet=>{if(hasInternet){clearInterval(retryInterval);window.location.href=lastUrl}else{retryCount++;document.getElementById('retryCount').textContent=retryCount}})},3000);window.addEventListener('online',()=>{clearInterval(retryInterval);setTimeout(()=>{checkInternet().then(hasInternet=>{if(hasInternet)window.location.href=lastUrl;else startAutoRetry()})},500)})}

@@ -2,7 +2,7 @@
   "name": "Chaturvedi Classes",
   "short_name": "Chaturvedi Classes",
   "description": "NCERT Library - Excellence in Education",
-  "start_url": "./classes.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f9fafb",
   "theme_color": "#b91c1c",
