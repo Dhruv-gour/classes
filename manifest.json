@@ -1,0 +1,19 @@
+{
+  "name": "Chaturvedi Classes",
+  "short_name": "Chaturvedi Classes",
+  "description": "NCERT Library - Excellence in Education",
+  "start_url": "./classes.html",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#b91c1c",
+  "orientation": "portrait-primary",
+  "offline_enabled": true,
+  "icons": [
+    {
+      "src": "img/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
+
