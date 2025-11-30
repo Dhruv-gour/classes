@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Chaturvedi Classes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js"></script>
+    
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyD8P6IzzXC9eXpOyJsJthV21s1bbL4kEKQ",
+            authDomain: "project-678474968676.firebaseapp.com",
+            projectId: "project-678474968676",
+            storageBucket: "project-678474968676.firebasestorage.app",
+            messagingSenderId: "678474968676",
+            appId: "1:678474968676:web:8c0c0c0c0c0c0c0c0c0c0c"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        window.firebaseAuth = firebase.auth();
+        window.firebaseDb = firebase.firestore();
+        window.firebaseStorage = firebase.storage();
+    </script>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        function AdminPanel() {
+            const [isLoggedIn, setIsLoggedIn] = useState(false);
+            const [username, setUsername] = useState('');
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+            const [activeTab, setActiveTab] = useState('videos');
+            const [videos, setVideos] = useState([]);
+            const [notifications, setNotifications] = useState([]);
+            const [helpPhoneNumber, setHelpPhoneNumber] = useState(localStorage.getItem('helpPhoneNumber') || '+1234567890');
+            const [users, setUsers] = useState([]);
+            const [newVideoTitle, setNewVideoTitle] = useState('');
+            const [newVideoUrl, setNewVideoUrl] = useState('');
+            const [newVideoClass, setNewVideoClass] = useState('all');
+            const [newNotificationTitle, setNewNotificationTitle] = useState('');
+            const [newNotificationMessage, setNewNotificationMessage] = useState('');
+            const [newNotificationClass, setNewNotificationClass] = useState('all');
+            
+            useEffect(() => {
+                if (isLoggedIn) {
+                    loadVideos();
+                    loadNotifications();
+                    loadUsers();
+                }
+            }, [isLoggedIn]);
+            
+            const handleLogin = (e) => {
+                e.preventDefault();
+                if (username === 'admin' && password === '123456') {
+                    setIsLoggedIn(true);
+                    setError('');
+                    // Don't save to localStorage or database
+                } else {
+                    setError('Invalid username or password');
+                }
+            };
+            
+            const handleLogout = () => {
+                setIsLoggedIn(false);
+                setUsername('');
+                setPassword('');
+                // Clear any session data
+            };
+            
+            const loadVideos = async () => {
+                try {
+                    const db = window.firebaseDb;
+                    const videosSnapshot = await db.collection('adminVideos').orderBy('createdAt', 'desc').get();
+                    const videosList = videosSnapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                    setVideos(videosList);
+                } catch (error) {
+                    console.error('Error loading videos:', error);
+                }
+            };
+            
+            const loadNotifications = async () => {
+                try {
+                    const db = window.firebaseDb;
+                    // Try with orderBy first
+                    try {
+                        const notificationsSnapshot = await db.collection('adminNotifications').orderBy('createdAt', 'desc').get();
+                        const notificationsList = notificationsSnapshot.docs.map(doc => ({
+                            id: doc.id,
+                            ...doc.data()
+                        }));
+                        setNotifications(notificationsList);
+                    } catch (orderError) {
+                        // If orderBy fails (index not created), get all and sort manually
+                        const notificationsSnapshot = await db.collection('adminNotifications').get();
+                        const notificationsList = notificationsSnapshot.docs.map(doc => ({
+                            id: doc.id,
+                            ...doc.data()
+                        }));
+                        // Sort manually by createdAt if available
+                        notificationsList.sort((a, b) => {
+                            const aTime = a.createdAt?.toMillis?.() || a.createdAt?.seconds || 0;
+                            const bTime = b.createdAt?.toMillis?.() || b.createdAt?.seconds || 0;
+                            return bTime - aTime;
+                        });
+                        setNotifications(notificationsList);
+                    }
+                } catch (error) {
+                    console.error('Error loading notifications:', error);
+                }
+            };
+            
+            const loadUsers = async () => {
+                try {
+                    const db = window.firebaseDb;
+                    const usersSnapshot = await db.collection('users').get();
+                    const usersList = usersSnapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                    setUsers(usersList);
+                } catch (error) {
+                    console.error('Error loading users:', error);
+                }
+            };
+            
+            const handleAddVideo = async (e) => {
+                e.preventDefault();
+                if (!newVideoTitle || !newVideoUrl) {
+                    alert('Please fill all fields');
+                    return;
+                }
+                
+                try {
+                    const db = window.firebaseDb;
+                    await db.collection('adminVideos').add({
+                        title: newVideoTitle,
+                        url: newVideoUrl,
+                        targetClass: newVideoClass,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    setNewVideoTitle('');
+                    setNewVideoUrl('');
+                    setNewVideoClass('all');
+                    loadVideos();
+                    alert('Video added successfully!');
+                } catch (error) {
+                    console.error('Error adding video:', error);
+                    alert('Error adding video');
+                }
+            };
+            
+            const handleAddNotification = async (e) => {
+                e.preventDefault();
+                if (!newNotificationTitle || !newNotificationMessage) {
+                    alert('Please fill all fields');
+                    return;
+                }
+                
+                try {
+                    const db = window.firebaseDb;
+                    await db.collection('adminNotifications').add({
+                        title: newNotificationTitle,
+                        message: newNotificationMessage,
+                        targetClass: newNotificationClass,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    setNewNotificationTitle('');
+                    setNewNotificationMessage('');
+                    setNewNotificationClass('all');
+                    loadNotifications();
+                    alert('Notification added successfully!');
+                } catch (error) {
+                    console.error('Error adding notification:', error);
+                    alert('Error adding notification');
+                }
+            };
+            
+            const handleDeleteVideo = async (id) => {
+                if (!confirm('Are you sure you want to delete this video?')) return;
+                
+                try {
+                    const db = window.firebaseDb;
+                    await db.collection('adminVideos').doc(id).delete();
+                    loadVideos();
+                    alert('Video deleted successfully!');
+                } catch (error) {
+                    console.error('Error deleting video:', error);
+                    alert('Error deleting video');
+                }
+            };
+            
+            const handleDeleteNotification = async (id) => {
+                if (!confirm('Are you sure you want to delete this notification?')) return;
+                
+                try {
+                    const db = window.firebaseDb;
+                    await db.collection('adminNotifications').doc(id).delete();
+                    loadNotifications();
+                    alert('Notification deleted successfully!');
+                } catch (error) {
+                    console.error('Error deleting notification:', error);
+                    alert('Error deleting notification');
+                }
+            };
+            
+            const handleUpdatePhoneNumber = async () => {
+                try {
+                    const db = window.firebaseDb;
+                    // Store in Firestore for all users
+                    await db.collection('adminSettings').doc('helpPhoneNumber').set({
+                        phoneNumber: helpPhoneNumber,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    // Also update localStorage for immediate effect
+                    localStorage.setItem('helpPhoneNumber', helpPhoneNumber);
+                    alert('Phone number updated successfully for all users!');
+                } catch (error) {
+                    console.error('Error updating phone number:', error);
+                    alert('Error updating phone number');
+                }
+            };
+            
+            if (!isLoggedIn) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-red-50 to-yellow-50 px-4">
+                        <div className="w-full max-w-md bg-white rounded-3xl border border-gray-200 shadow-2xl p-8">
+                            <div className="text-center mb-8">
+                                <h1 className="text-3xl font-bold text-red-900 mb-2">Admin Login</h1>
+                                <p className="text-gray-600 text-sm">Chaturvedi Classes Admin Panel</p>
+                            </div>
+                            
+                            {error && (
+                                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm mb-6">
+                                    {error}
+                                </div>
+                            )}
+                            
+                            <form onSubmit={handleLogin} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Username</label>
+                                    <input
+                                        type="text"
+                                        value={username}
+                                        onChange={(e) => setUsername(e.target.value)}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
+                                        placeholder="Enter username"
+                                        required
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+                                    <input
+                                        type="password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
+                                        placeholder="Enter password"
+                                        required
+                                    />
+                                </div>
+                                
+                                <button
+                                    type="submit"
+                                    className="w-full bg-red-700 text-white py-3 rounded-xl font-bold text-lg hover:bg-red-800 transition-all duration-300 shadow-md shadow-red-200"
+                                >
+                                    Login
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                );
+            }
+            
+            return (
+                <div className="min-h-screen bg-gray-50">
+                    <header className="bg-white border-b border-gray-200 shadow-sm">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div className="flex justify-between items-center h-16">
+                                <div>
+                                    <h1 className="text-xl font-bold text-red-900">Admin Panel</h1>
+                                    <p className="text-xs text-gray-500">Chaturvedi Classes</p>
+                                </div>
+                                <button
+                                    onClick={handleLogout}
+                                    className="px-4 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors"
+                                >
+                                    Logout
+                                </button>
+                            </div>
+                        </div>
+                    </header>
+                    
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                        <div className="flex gap-4 mb-6 border-b border-gray-200">
+                            <button
+                                onClick={() => setActiveTab('videos')}
+                                className={`px-4 py-2 font-semibold transition-colors ${
+                                    activeTab === 'videos' ? 'text-red-700 border-b-2 border-red-700' : 'text-gray-600'
+                                }`}
+                            >
+                                Videos
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('notifications')}
+                                className={`px-4 py-2 font-semibold transition-colors ${
+                                    activeTab === 'notifications' ? 'text-red-700 border-b-2 border-red-700' : 'text-gray-600'
+                                }`}
+                            >
+                                Notifications
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('settings')}
+                                className={`px-4 py-2 font-semibold transition-colors ${
+                                    activeTab === 'settings' ? 'text-red-700 border-b-2 border-red-700' : 'text-gray-600'
+                                }`}
+                            >
+                                Settings
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('users')}
+                                className={`px-4 py-2 font-semibold transition-colors ${
+                                    activeTab === 'users' ? 'text-red-700 border-b-2 border-red-700' : 'text-gray-600'
+                                }`}
+                            >
+                                Users ({users.length})
+                            </button>
+                        </div>
+                        
+                        {activeTab === 'videos' && (
+                            <div className="space-y-6">
+                                <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                                    <h2 className="text-xl font-bold text-gray-900 mb-4">Add New Video</h2>
+                                    <form onSubmit={handleAddVideo} className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-2">Video Title</label>
+                                            <input
+                                                type="text"
+                                                value={newVideoTitle}
+                                                onChange={(e) => setNewVideoTitle(e.target.value)}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
+                                                placeholder="Enter video title"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-2">Video URL</label>
+                                            <input
+                                                type="url"
+                                                value={newVideoUrl}
+                                                onChange={(e) => setNewVideoUrl(e.target.value)}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
+                                                placeholder="Enter video URL (YouTube, etc.)"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-2">Target Class</label>
+                                            <select
+                                                value={newVideoClass}
+                                                onChange={(e) => setNewVideoClass(e.target.value)}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
+                                            >
+                                                <option value="all">All Classes</option>
+                                                <option value="9">Class 9</option>
+                                                <option value="10">Class 10</option>
+                                                <option value="11">Class 11</option>
+                                                <option value="12">Class 12</option>
+                                            </select>
+                                        </div>
+                                        <button
+                                            type="submit"
+                                            className="w-full bg-red-700 text-white py-3 rounded-xl font-semibold hover:bg-red-800 transition-all"
+                                        >
+                                            Add Video
+                                        </button>
+                                    </form>
+                                </div>
+                                
+                                <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                                    <h2 className="text-xl font-bold text-gray-900 mb-4">All Videos</h2>
+                                    <div className="space-y-4">
+                                        {videos.map((video) => (
+                                            <div key={video.id} className="flex justify-between items-center p-4 border border-gray-200 rounded-xl">
+                                                <div>
+                                                    <h3 className="font-semibold text-gray-900">{video.title}</h3>
+                                                    <p className="text-sm text-gray-500">{video.url}</p>
+                                                    <p className="text-xs text-gray-400 mt-1">Target: {video.targetClass === 'all' ? 'All Classes' : `Class ${video.targetClass}`}</p>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleDeleteVideo(video.id)}
+                                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                                                >
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {videos.length === 0 && (
+                                            <p className="text-gray-500 text-center py-8">No videos added yet</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        
+                        {activeTab === 'notifications' && (
+                            <div className="space-y-6">
+                                <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                                    <h2 className="text-xl font-bold text-gray-900 mb-4">Add New Notification</h2>
+                                    <form onSubmit={handleAddNotification} className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-2">Notification Title</label>
+                                            <input
+                                                type="text"
+                                                value={newNotificationTitle}
+                                                onChange={(e) => setNewNotificationTitle(e.target.value)}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
+                                                placeholder="Enter notification title"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-2">Notification Message</label>
+                                            <textarea
+                                                value={newNotificationMessage}
+                                                onChange={(e) => setNewNotificationMessage(e.target.value)}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
+                                                placeholder="Enter notification message"
+                                                rows="4"
+                                                required
+                                            ></textarea>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-2">Target Class</label>
+                                            <select
+                                                value={newNotificationClass}
+                                                onChange={(e) => setNewNotificationClass(e.target.value)}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
+                                            >
+                                                <option value="all">All Classes</option>
+                                                <option value="9">Class 9</option>
+                                                <option value="10">Class 10</option>
+                                                <option value="11">Class 11</option>
+                                                <option value="12">Class 12</option>
+                                            </select>
+                                        </div>
+                                        <button
+                                            type="submit"
+                                            className="w-full bg-red-700 text-white py-3 rounded-xl font-semibold hover:bg-red-800 transition-all"
+                                        >
+                                            Add Notification
+                                        </button>
+                                    </form>
+                                </div>
+                                
+                                <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                                    <h2 className="text-xl font-bold text-gray-900 mb-4">All Notifications</h2>
+                                    <div className="space-y-4">
+                                        {notifications.map((notification) => (
+                                            <div key={notification.id} className="flex justify-between items-start p-4 border border-gray-200 rounded-xl">
+                                                <div>
+                                                    <h3 className="font-semibold text-gray-900">{notification.title}</h3>
+                                                    <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
+                                                    <p className="text-xs text-gray-400 mt-1">Target: {notification.targetClass === 'all' ? 'All Classes' : `Class ${notification.targetClass}`}</p>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleDeleteNotification(notification.id)}
+                                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                                                >
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {notifications.length === 0 && (
+                                            <p className="text-gray-500 text-center py-8">No notifications added yet</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        
+                        {activeTab === 'settings' && (
+                            <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                                <h2 className="text-xl font-bold text-gray-900 mb-4">Help Phone Number</h2>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
+                                        <input
+                                            type="tel"
+                                            value={helpPhoneNumber}
+                                            onChange={(e) => setHelpPhoneNumber(e.target.value)}
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
+                                            placeholder="+1234567890"
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={handleUpdatePhoneNumber}
+                                        className="w-full bg-red-700 text-white py-3 rounded-xl font-semibold hover:bg-red-800 transition-all"
+                                    >
+                                        Update Phone Number
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                        
+                        {activeTab === 'users' && (
+                            <div className="bg-white rounded-2xl border border-gray-200 p-4 md:p-6">
+                                <h2 className="text-xl font-bold text-gray-900 mb-4">All Users ({users.length})</h2>
+                                <div className="overflow-x-auto -mx-4 md:mx-0">
+                                    <div className="min-w-full inline-block align-middle">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                <tr className="border-b border-gray-200">
+                                                    <th className="text-left py-2 px-2 md:px-4 font-semibold text-gray-700 text-xs md:text-sm">Name</th>
+                                                    <th className="text-left py-2 px-2 md:px-4 font-semibold text-gray-700 text-xs md:text-sm">Email</th>
+                                                    <th className="text-left py-2 px-2 md:px-4 font-semibold text-gray-700 text-xs md:text-sm">Class</th>
+                                                    <th className="text-left py-2 px-2 md:px-4 font-semibold text-gray-700 text-xs md:text-sm">Phone</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {users.map((user) => (
+                                                    <tr key={user.id} className="border-b border-gray-100">
+                                                        <td className="py-2 px-2 md:px-4 text-gray-900 text-xs md:text-sm">{user.name || 'N/A'}</td>
+                                                        <td className="py-2 px-2 md:px-4 text-gray-600 text-xs md:text-sm break-all">{user.email || 'N/A'}</td>
+                                                        <td className="py-2 px-2 md:px-4 text-gray-600 text-xs md:text-sm">{user.class || 'N/A'}</td>
+                                                        <td className="py-2 px-2 md:px-4 text-gray-600 text-xs md:text-sm">{user.phone || 'N/A'}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                        {users.length === 0 && (
+                                            <p className="text-gray-500 text-center py-8">No users found</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+        
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<AdminPanel />);
+    </script>
+</body>
+</html>
+

@@ -804,11 +804,62 @@
         }
 
         // --- Home Page Component ---
-        function HomePage({ onNavigateToLibrary, username, onLogout, onNavigateToProfile, onNavigateToQuiz }) {
+        function HomePage({ onNavigateToLibrary, username, onLogout, onNavigateToProfile, onNavigateToQuiz, onNavigateToAI, onNavigateToFeatures, onNavigateToLocation, onNavigateToNotifications }) {
             const [isNavOpen, setIsNavOpen] = useState(false);
             const [profilePicture, setProfilePicture] = useState(localStorage.getItem('profilePicture') || '');
             const [bannerIndex, setBannerIndex] = useState(0);
-            const [quickActionScroll, setQuickActionScroll] = useState(0);
+            const [showLeftArrow, setShowLeftArrow] = useState(false);
+            const [showRightArrow, setShowRightArrow] = useState(true);
+            const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
+            
+            // Check for unread notifications
+            useEffect(() => {
+                const checkNotifications = async () => {
+                    try {
+                        const auth = window.firebaseAuth;
+                        const db = window.firebaseDb;
+                        const user = auth.currentUser;
+                        
+                        if (!user) return;
+                        
+                        // Get user class
+                        const userDoc = await db.collection("users").doc(user.uid).get();
+                        const userClass = userDoc.exists ? userDoc.data().class : '';
+                        
+                        // Get last check time
+                        const lastCheck = localStorage.getItem('lastNotificationCheck');
+                        const lastCheckTime = lastCheck ? parseInt(lastCheck) : 0;
+                        
+                        // Load notifications
+                        const notificationsSnapshot = await db.collection('adminNotifications').get();
+                        const allNotifications = notificationsSnapshot.docs.map(doc => ({
+                            id: doc.id,
+                            ...doc.data()
+                        }));
+                        
+                        // Filter by user's class or "all"
+                        const relevantNotifications = allNotifications.filter(notif => 
+                            notif.targetClass === 'all' || notif.targetClass === userClass
+                        );
+                        
+                        // Check if there are new notifications
+                        const hasNew = relevantNotifications.some(notif => {
+                            const notifTime = notif.createdAt?.toMillis?.() || notif.createdAt?.seconds * 1000 || 0;
+                            return notifTime > lastCheckTime;
+                        });
+                        
+                        setHasUnreadNotifications(hasNew);
+                        localStorage.setItem('hasUnreadNotifications', hasNew ? 'true' : 'false');
+                    } catch (error) {
+                        console.error('Error checking notifications:', error);
+                    }
+                };
+                
+                checkNotifications();
+                // Check every 30 seconds
+                const interval = setInterval(checkNotifications, 30000);
+                return () => clearInterval(interval);
+            }, []);
             
             // Auto-scroll banners
             useEffect(() => {
@@ -1024,8 +1075,29 @@
                                         <button
                                             onClick={() => { 
                                                 closeNav(); 
+                                                const playStoreLink = 'https://play.google.com/store/apps/dev?id=8205647922049206296&hl=en_IN';
                                                 const shareText = 'Check out Chaturvedi Classes - Best educational app for NCERT books, daily quizzes, and more!';
-                                                handleShare(shareText);
+                                                const fullText = `${shareText}\n\nDownload now: ${playStoreLink}`;
+                                                
+                                                if (navigator.share) {
+                                                    navigator.share({
+                                                        title: 'Chaturvedi Classes',
+                                                        text: fullText,
+                                                        url: playStoreLink
+                                                    }).catch(err => console.log('Error sharing:', err));
+                                                } else {
+                                                    navigator.clipboard.writeText(fullText).then(() => {
+                                                        alert('Link copied to clipboard!');
+                                                    }).catch(() => {
+                                                        const textArea = document.createElement('textarea');
+                                                        textArea.value = fullText;
+                                                        document.body.appendChild(textArea);
+                                                        textArea.select();
+                                                        document.execCommand('copy');
+                                                        document.body.removeChild(textArea);
+                                                        alert('Link copied to clipboard!');
+                                                    });
+                                                }
                                             }}
                                             className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-yellow-50 hover:text-red-700 rounded-xl transition-colors group"
                                         >
@@ -1034,11 +1106,19 @@
                                         </button>
                                         
                                         <button
-                                            onClick={() => { closeNav(); }}
+                                            onClick={() => { closeNav(); onNavigateToLocation(); }}
                                             className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-yellow-50 hover:text-red-700 rounded-xl transition-colors group"
                                         >
                                             <MapPin className="w-5 h-5 text-gray-400 group-hover:text-red-700" />
                                             <span className="font-medium">Location</span>
+                                        </button>
+                                        
+                                        <button
+                                            onClick={() => { closeNav(); onNavigateToNotifications(); }}
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-yellow-50 hover:text-red-700 rounded-xl transition-colors group"
+                                        >
+                                            <Bell className="w-5 h-5 text-gray-400 group-hover:text-red-700" />
+                                            <span className="font-medium">Notifications</span>
                                         </button>
                                         
                                         <button
@@ -1084,7 +1164,7 @@
                                             )}
                                         </div>
                                         <div>
-                                            <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
+                                            <h2 className="text-2xl md:text-3xl font-semibold text-gray-900">
                                                 Hey, <span className="text-red-700">{username.split(' ')[0]}</span>
                                             </h2>
                                             <p className="text-sm text-gray-600 mt-1">Ready to learn today?</p>
@@ -1166,23 +1246,34 @@
                             <div className="mb-8">
                                 <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
                                 <div className="relative">
-                                    <button
-                                        onClick={() => {
-                                            const container = document.getElementById('quick-actions-scroll');
-                                            if (container) container.scrollBy({ left: -100, behavior: 'smooth' });
-                                        }}
-                                        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-md rounded-full p-2 transition-all"
-                                    >
-                                        <ChevronLeft className="w-5 h-5 text-gray-700" />
-                                    </button>
+                                    {showLeftArrow && (
+                                        <button
+                                            onClick={() => {
+                                                const container = document.getElementById('quick-actions-scroll');
+                                                if (container) container.scrollBy({ left: -100, behavior: 'smooth' });
+                                            }}
+                                            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-md rounded-full p-2 transition-all"
+                                        >
+                                            <ChevronLeft className="w-5 h-5 text-gray-700" />
+                                        </button>
+                                    )}
                                     <div 
                                         id="quick-actions-scroll"
                                         className="overflow-x-auto scrollbar-hide scroll-smooth" 
                                         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                                        onScroll={(e) => {
+                                            const container = e.target;
+                                            const scrollLeft = container.scrollLeft;
+                                            const scrollWidth = container.scrollWidth;
+                                            const clientWidth = container.clientWidth;
+                                            
+                                            setShowLeftArrow(scrollLeft > 0);
+                                            setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
+                                        }}
                                     >
-                                        <div className="flex gap-2 pb-2 px-10" style={{ width: 'max-content' }}>
+                                        <div className="flex gap-2 pb-2 px-2" style={{ width: 'max-content' }}>
                                             <a 
-                                                href="tel:+1234567890"
+                                                href={`tel:${localStorage.getItem('helpPhoneNumber') || '+1234567890'}`}
                                                 className="flex-shrink-0 flex flex-col items-center justify-center gap-1.5 w-20 h-20 bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-red-300 transition-all duration-300 group"
                                             >
                                                 <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center group-hover:bg-red-200 transition-colors">
@@ -1192,19 +1283,21 @@
                                             </a>
                                             
                                             <button
-                                                onClick={() => {/* Handle notifications */}}
+                                                onClick={() => onNavigateToNotifications()}
                                                 className="flex-shrink-0 flex flex-col items-center justify-center gap-1.5 w-20 h-20 bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-yellow-300 transition-all duration-300 group relative"
                                             >
                                                 <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center group-hover:bg-yellow-200 transition-colors relative">
                                                     <Bell className="w-5 h-5 text-yellow-700" />
-                                                    {/* Notification badge */}
-                                                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                                                    {/* Notification badge - only show if unread */}
+                                                    {hasUnreadNotifications && (
+                                                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                                                    )}
                                                 </div>
                                                 <span className="text-[10px] font-semibold text-gray-700 text-center">Notifications</span>
                                             </button>
                                             
                                             <button
-                                                onClick={() => {/* Handle Ask AI */}}
+                                                onClick={() => onNavigateToAI()}
                                                 className="flex-shrink-0 flex flex-col items-center justify-center gap-1.5 w-20 h-20 bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-red-300 transition-all duration-300 group"
                                             >
                                                 <div className="w-10 h-10 bg-gradient-to-br from-red-100 to-yellow-100 rounded-full flex items-center justify-center group-hover:from-red-200 group-hover:to-yellow-200 transition-colors">
@@ -1224,15 +1317,17 @@
                                             </button>
                                         </div>
                                     </div>
-                                    <button
-                                        onClick={() => {
-                                            const container = document.getElementById('quick-actions-scroll');
-                                            if (container) container.scrollBy({ left: 100, behavior: 'smooth' });
-                                        }}
-                                        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-md rounded-full p-2 transition-all"
-                                    >
-                                        <ChevronRight className="w-5 h-5 text-gray-700" />
-                                    </button>
+                                    {showRightArrow && (
+                                        <button
+                                            onClick={() => {
+                                                const container = document.getElementById('quick-actions-scroll');
+                                                if (container) container.scrollBy({ left: 100, behavior: 'smooth' });
+                                            }}
+                                            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-md rounded-full p-2 transition-all"
+                                        >
+                                            <ChevronRight className="w-5 h-5 text-gray-700" />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
@@ -1241,7 +1336,7 @@
                                 <div className="flex justify-between items-center mb-4">
                                     <h3 className="text-lg font-bold text-gray-900">Features</h3>
                                     <button
-                                        onClick={onNavigateToLibrary}
+                                        onClick={onNavigateToFeatures}
                                         className="text-sm font-semibold text-red-700 hover:text-red-800 transition-colors"
                                     >
                                         View all
@@ -1262,7 +1357,7 @@
                                                 <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-sm">
                                                     <Book className="w-6 h-6 text-red-700" />
                                                 </div>
-                                                <h3 className="text-base font-bold text-gray-900">NCERT Books</h3>
+                                                <h3 className="text-base font-semibold text-gray-900">NCERT Books</h3>
                                             </div>
                                             <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-red-700 group-hover:translate-x-1 transition-all" />
                                         </div>
@@ -1282,7 +1377,7 @@
                                                 <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-sm">
                                                     <GraduationCap className="w-6 h-6 text-blue-700" />
                                                 </div>
-                                                <h3 className="text-base font-bold text-gray-900">All Classes</h3>
+                                                <h3 className="text-base font-semibold text-gray-900">All Classes</h3>
                                             </div>
                                             <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-700 group-hover:translate-x-1 transition-all" />
                                         </div>
@@ -1302,7 +1397,7 @@
                                                 <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-sm">
                                                     <Download className="w-6 h-6 text-green-700" />
                                                 </div>
-                                                <h3 className="text-base font-bold text-gray-900">Easy Download</h3>
+                                                <h3 className="text-base font-semibold text-gray-900">Easy Download</h3>
                                             </div>
                                             <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-green-700 group-hover:translate-x-1 transition-all" />
                                         </div>
@@ -1870,11 +1965,264 @@
             );
         }
 
+        // --- AI Chat Component ---
+        function AIChat({ onBackToHome }) {
+            const [messages, setMessages] = useState([
+                { role: 'assistant', content: 'Hello! I\'m your AI assistant. How can I help you with your studies today?' }
+            ]);
+            const [inputMessage, setInputMessage] = useState('');
+            const [isLoading, setIsLoading] = useState(false);
+            
+            const handleSend = async () => {
+                if (!inputMessage.trim() || isLoading) return;
+                
+                const userMessage = { role: 'user', content: inputMessage };
+                setMessages(prev => [...prev, userMessage]);
+                setInputMessage('');
+                setIsLoading(true);
+                
+                // TODO: Replace with actual API endpoint
+                const API_ENDPOINT = 'YOUR_API_ENDPOINT_HERE';
+                const API_KEY = 'YOUR_API_KEY_HERE';
+                
+                try {
+                    // Placeholder for API call - replace with actual implementation
+                    setTimeout(() => {
+                        const aiResponse = {
+                            role: 'assistant',
+                            content: 'I understand your question. Once you integrate the AI API, I\'ll be able to provide detailed answers to your study questions!'
+                        };
+                        setMessages(prev => [...prev, aiResponse]);
+                        setIsLoading(false);
+                    }, 1000);
+                } catch (error) {
+                    console.error('Error:', error);
+                    const errorResponse = {
+                        role: 'assistant',
+                        content: 'Sorry, I encountered an error. Please try again later.'
+                    };
+                    setMessages(prev => [...prev, errorResponse]);
+                    setIsLoading(false);
+                }
+            };
+            
+            const handleKeyPress = (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                }
+            };
+            
+            return (
+                <div className="min-h-screen flex flex-col font-sans bg-gray-50 text-gray-900">
+                    <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div className="flex justify-between items-center h-16">
+                                <div className="flex items-center gap-3 select-none">
+                                    <div className="w-10 h-10 flex items-center justify-center overflow-hidden">
+                                        <img src="img/logo.png" alt="Chaturvedi Classes Logo" className="w-full h-full object-contain" />
+                                    </div>
+                                    <div>
+                                        <h1 className="text-lg md:text-xl font-bold text-red-900 leading-tight">AI Assistant</h1>
+                                        <p className="text-[10px] md:text-xs text-gray-500 font-semibold tracking-wider">Chaturvedi Classes</p>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={onBackToHome}
+                                    className="p-2 text-gray-600 hover:text-red-700 transition-colors rounded-lg hover:bg-gray-100"
+                                >
+                                    <ArrowLeft className="w-6 h-6" />
+                                </button>
+                            </div>
+                        </div>
+                    </header>
+                    
+                    <main className="flex-1 flex flex-col max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 h-[calc(100vh-4rem)]">
+                        <div className="flex-1 overflow-y-auto mb-4 space-y-4 min-h-0 pb-4">
+                            {messages.map((msg, index) => (
+                                <div
+                                    key={index}
+                                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                                >
+                                    <div
+                                        className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                                            msg.role === 'user'
+                                                ? 'bg-red-700 text-white'
+                                                : 'bg-white border border-gray-200 text-gray-900'
+                                        }`}
+                                    >
+                                        <p className="text-sm md:text-base whitespace-pre-wrap break-words">{msg.content}</p>
+                                    </div>
+                                </div>
+                            ))}
+                            {isLoading && (
+                                <div className="flex justify-start">
+                                    <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3">
+                                        <div className="flex gap-1">
+                                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        
+                        <div className="bg-white rounded-2xl border border-gray-200 p-3 shadow-sm flex-shrink-0">
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    value={inputMessage}
+                                    onChange={(e) => setInputMessage(e.target.value)}
+                                    onKeyPress={handleKeyPress}
+                                    placeholder="Type your question..."
+                                    className="flex-1 px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm"
+                                    disabled={isLoading}
+                                />
+                                <button
+                                    onClick={handleSend}
+                                    disabled={!inputMessage.trim() || isLoading}
+                                    className="p-2.5 bg-red-700 text-white rounded-xl hover:bg-red-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                                    title="Send"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        }
+
+        // --- All Features Screen ---
+        function AllFeatures({ onBackToHome, onNavigateToLibrary, onNavigateToAllClasses }) {
+            return (
+                <div className="min-h-screen flex flex-col font-sans bg-gray-50 text-gray-900">
+                    <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div className="flex justify-between items-center h-16">
+                                <div className="flex items-center gap-3 select-none">
+                                    <div className="w-10 h-10 flex items-center justify-center overflow-hidden">
+                                        <img src="img/logo.png" alt="Chaturvedi Classes Logo" className="w-full h-full object-contain" />
+                                    </div>
+                                    <div>
+                                        <h1 className="text-lg md:text-xl font-bold text-red-900 leading-tight">Chaturvedi <span className="text-yellow-600">Classes</span></h1>
+                                        <p className="text-[10px] md:text-xs text-gray-500 font-semibold tracking-wider">EXCELLENCE IN EDUCATION</p>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={onBackToHome}
+                                    className="p-2 text-gray-600 hover:text-red-700 transition-colors rounded-lg hover:bg-gray-100"
+                                >
+                                    <ArrowLeft className="w-6 h-6" />
+                                </button>
+                            </div>
+                        </div>
+                    </header>
+                    
+                    <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div 
+                                onClick={onNavigateToLibrary}
+                                className="bg-gradient-to-br from-red-50 to-yellow-50 rounded-2xl border border-red-100 p-6 hover:shadow-xl hover:shadow-gray-200/50 hover:border-red-400 transition-all duration-300 cursor-pointer group relative overflow-hidden"
+                            >
+                                <div className="absolute top-0 right-0 w-20 h-20 bg-red-200/20 rounded-full -mr-10 -mt-10"></div>
+                                <div className="absolute bottom-0 left-0 w-16 h-16 bg-yellow-200/20 rounded-full -ml-8 -mb-8"></div>
+                                <div className="relative z-10 flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-sm">
+                                            <Book className="w-6 h-6 text-red-700" />
+                                        </div>
+                                        <h3 className="text-lg font-bold text-gray-900">NCERT Books</h3>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-red-700 group-hover:translate-x-1 transition-all" />
+                                </div>
+                            </div>
+                            
+                            <div 
+                                onClick={onNavigateToAllClasses}
+                                className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100 p-6 hover:shadow-xl hover:shadow-gray-200/50 hover:border-blue-400 transition-all duration-300 cursor-pointer group relative overflow-hidden"
+                            >
+                                <div className="absolute top-0 right-0 w-20 h-20 bg-blue-200/20 rounded-full -mr-10 -mt-10"></div>
+                                <div className="absolute bottom-0 left-0 w-16 h-16 bg-indigo-200/20 rounded-full -ml-8 -mb-8"></div>
+                                <div className="relative z-10 flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-sm">
+                                            <GraduationCap className="w-6 h-6 text-blue-700" />
+                                        </div>
+                                        <h3 className="text-lg font-bold text-gray-900">All Classes</h3>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-700 group-hover:translate-x-1 transition-all" />
+                                </div>
+                            </div>
+                            
+                            <div 
+                                onClick={onNavigateToLibrary}
+                                className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border border-green-100 p-6 hover:shadow-xl hover:shadow-gray-200/50 hover:border-green-400 transition-all duration-300 cursor-pointer group relative overflow-hidden"
+                            >
+                                <div className="absolute top-0 right-0 w-20 h-20 bg-green-200/20 rounded-full -mr-10 -mt-10"></div>
+                                <div className="absolute bottom-0 left-0 w-16 h-16 bg-emerald-200/20 rounded-full -ml-8 -mb-8"></div>
+                                <div className="relative z-10 flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-sm">
+                                            <Download className="w-6 h-6 text-green-700" />
+                                        </div>
+                                        <h3 className="text-lg font-bold text-gray-900">Easy Download</h3>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-green-700 group-hover:translate-x-1 transition-all" />
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        }
+
         // --- NCERT Library Component (Existing Code - Unchanged) ---
         function NCERTLibrary({ onBackToHome }) {
             const [selectedClass, setSelectedClass] = useState(10);
             const [selectedBook, setSelectedBook] = useState(null);
             const [searchQuery, setSearchQuery] = useState("");
+            
+            // Auto-select user's class from profile
+            useEffect(() => {
+                const loadUserClass = async () => {
+                    try {
+                        const auth = window.firebaseAuth;
+                        const db = window.firebaseDb;
+                        const user = auth.currentUser;
+                        
+                        if (user) {
+                            const userDoc = await db.collection("users").doc(user.uid).get();
+                            if (userDoc.exists) {
+                                const userData = userDoc.data();
+                                const userClass = userData.class;
+                                if (userClass && [9, 10, 11, 12].includes(parseInt(userClass))) {
+                                    setSelectedClass(parseInt(userClass));
+                                }
+                            } else {
+                                // Fallback to localStorage
+                                const cachedClass = localStorage.getItem('userClass');
+                                if (cachedClass && [9, 10, 11, 12].includes(parseInt(cachedClass))) {
+                                    setSelectedClass(parseInt(cachedClass));
+                                }
+                            }
+                        } else {
+                            // Testing mode - check localStorage
+                            const cachedClass = localStorage.getItem('userClass');
+                            if (cachedClass && [9, 10, 11, 12].includes(parseInt(cachedClass))) {
+                                setSelectedClass(parseInt(cachedClass));
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Error loading user class:", error);
+                    }
+                };
+                
+                loadUserClass();
+            }, []);
 
             const getChapterUrl = (bookCode, chapterNum) => {
                 const paddedNum = chapterNum.toString().padStart(2, '0');
@@ -2097,12 +2445,31 @@
 
         // --- Main App Component (Router) ---
         // 🔧 TESTING MODE: Set to false to enable login page, true to skip login
-        const DISABLE_LOGIN_FOR_TESTING = false;
+        const DISABLE_LOGIN_FOR_TESTING = true;
         
         function App() {
-            const [currentView, setCurrentView] = useState(DISABLE_LOGIN_FOR_TESTING ? 'home' : 'login'); // 'login', 'home', 'library', 'profile', 'quiz'
+            const [currentView, setCurrentView] = useState(DISABLE_LOGIN_FOR_TESTING ? 'home' : 'login'); // 'login', 'home', 'library', 'profile', 'quiz', 'ai', 'features', 'location', 'notifications', 'allclasses'
             const [username, setUsername] = useState(DISABLE_LOGIN_FOR_TESTING ? 'Test User' : '');
             const [isCheckingAuth, setIsCheckingAuth] = useState(!DISABLE_LOGIN_FOR_TESTING);
+
+            // Handle mobile back button - navigate to home if not on home/login
+            useEffect(() => {
+                const handleBackButton = () => {
+                    if (currentView !== 'home' && currentView !== 'login') {
+                        setCurrentView('home');
+                    }
+                };
+                
+                // Listen for popstate (back button)
+                window.addEventListener('popstate', handleBackButton);
+                
+                // Push state to enable back button detection
+                window.history.pushState(null, '', window.location.href);
+                
+                return () => {
+                    window.removeEventListener('popstate', handleBackButton);
+                };
+            }, [currentView]);
 
             // Check authentication state on mount
             useEffect(() => {
@@ -2303,6 +2670,26 @@
             const handleNavigateToQuiz = () => {
                 setCurrentView('quiz');
             };
+            
+            const handleNavigateToAI = () => {
+                setCurrentView('ai');
+            };
+            
+            const handleNavigateToFeatures = () => {
+                setCurrentView('features');
+            };
+            
+            const handleNavigateToLocation = () => {
+                setCurrentView('location');
+            };
+            
+            const handleNavigateToNotifications = () => {
+                setCurrentView('notifications');
+            };
+            
+            const handleNavigateToAllClasses = () => {
+                setCurrentView('allclasses');
+            };
 
             // Show loading while checking authentication
             if (isCheckingAuth) {
@@ -2320,13 +2707,23 @@
             if (currentView === 'login') {
                 return <LoginPage onLogin={handleLogin} />;
             } else if (currentView === 'home') {
-                return <HomePage onNavigateToLibrary={handleNavigateToLibrary} username={username} onLogout={handleLogout} onNavigateToProfile={handleNavigateToProfile} onNavigateToQuiz={handleNavigateToQuiz} />;
+                return <HomePage onNavigateToLibrary={handleNavigateToLibrary} username={username} onLogout={handleLogout} onNavigateToProfile={handleNavigateToProfile} onNavigateToQuiz={handleNavigateToQuiz} onNavigateToAI={handleNavigateToAI} onNavigateToFeatures={handleNavigateToFeatures} onNavigateToLocation={handleNavigateToLocation} onNavigateToNotifications={handleNavigateToNotifications} />;
             } else if (currentView === 'library') {
                 return <NCERTLibrary onBackToHome={handleBackToHome} />;
             } else if (currentView === 'profile') {
                 return <ProfileEditPage onBackToHome={handleBackToHome} username={username} onUsernameUpdate={setUsername} />;
             } else if (currentView === 'quiz') {
                 return <DailyQuiz onBackToHome={handleBackToHome} username={username} />;
+            } else if (currentView === 'ai') {
+                return <AIChat onBackToHome={handleBackToHome} />;
+            } else if (currentView === 'features') {
+                return <AllFeatures onBackToHome={handleBackToHome} onNavigateToLibrary={handleNavigateToLibrary} onNavigateToAllClasses={handleNavigateToAllClasses} />;
+            } else if (currentView === 'location') {
+                return <LocationScreen onBackToHome={handleBackToHome} />;
+            } else if (currentView === 'notifications') {
+                return <NotificationsScreen onBackToHome={handleBackToHome} />;
+            } else if (currentView === 'allclasses') {
+                return <AllClassesScreen onBackToHome={handleBackToHome} />;
             }
 
             return null;
