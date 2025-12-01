@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,11 +9,11 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js"></script>
-    
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyD8P6IzzXC9eXpOyJsJthV21s1bbL4kEKQ",
@@ -22,19 +23,20 @@
             messagingSenderId: "678474968676",
             appId: "1:678474968676:web:8c0c0c0c0c0c0c0c0c0c0c"
         };
-        
+
         firebase.initializeApp(firebaseConfig);
         window.firebaseAuth = firebase.auth();
         window.firebaseDb = firebase.firestore();
         window.firebaseStorage = firebase.storage();
     </script>
 </head>
+
 <body>
     <div id="root"></div>
-    
+
     <script type="text/babel">
         const { useState, useEffect } = React;
-        
+
         function AdminPanel() {
             const [isLoggedIn, setIsLoggedIn] = useState(false);
             const [username, setUsername] = useState('');
@@ -51,7 +53,7 @@
             const [newNotificationTitle, setNewNotificationTitle] = useState('');
             const [newNotificationMessage, setNewNotificationMessage] = useState('');
             const [newNotificationClass, setNewNotificationClass] = useState('all');
-            
+
             useEffect(() => {
                 if (isLoggedIn) {
                     loadVideos();
@@ -59,7 +61,7 @@
                     loadUsers();
                 }
             }, [isLoggedIn]);
-            
+
             const handleLogin = (e) => {
                 e.preventDefault();
                 if (username === 'admin' && password === '123456') {
@@ -70,14 +72,14 @@
                     setError('Invalid username or password');
                 }
             };
-            
+
             const handleLogout = () => {
                 setIsLoggedIn(false);
                 setUsername('');
                 setPassword('');
                 // Clear any session data
             };
-            
+
             const loadVideos = async () => {
                 try {
                     const db = window.firebaseDb;
@@ -91,7 +93,7 @@
                     console.error('Error loading videos:', error);
                 }
             };
-            
+
             const loadNotifications = async () => {
                 try {
                     const db = window.firebaseDb;
@@ -122,28 +124,39 @@
                     console.error('Error loading notifications:', error);
                 }
             };
-            
+
             const loadUsers = async () => {
                 try {
                     const db = window.firebaseDb;
                     const usersSnapshot = await db.collection('users').get();
-                    const usersList = usersSnapshot.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data()
-                    }));
+                    const usersList = usersSnapshot.docs.map(doc => {
+                        const data = doc.data();
+                        return {
+                            id: doc.id,
+                            name: data.name || data.username || data.displayName || 'N/A',
+                            email: data.email || 'N/A',
+                            class: data.class || 'N/A',
+                            phone: data.phone || 'N/A'
+                        };
+                    });
                     setUsers(usersList);
+                    console.log('✅ Users loaded:', usersList.length, usersList);
                 } catch (error) {
-                    console.error('Error loading users:', error);
+                    console.error('❌ Error loading users:', error);
+                    console.error('Error details:', {
+                        code: error.code,
+                        message: error.message
+                    });
                 }
             };
-            
+
             const handleAddVideo = async (e) => {
                 e.preventDefault();
                 if (!newVideoTitle || !newVideoUrl) {
                     alert('Please fill all fields');
                     return;
                 }
-                
+
                 try {
                     const db = window.firebaseDb;
                     await db.collection('adminVideos').add({
@@ -162,14 +175,14 @@
                     alert('Error adding video');
                 }
             };
-            
+
             const handleAddNotification = async (e) => {
                 e.preventDefault();
                 if (!newNotificationTitle || !newNotificationMessage) {
                     alert('Please fill all fields');
                     return;
                 }
-                
+
                 try {
                     const db = window.firebaseDb;
                     await db.collection('adminNotifications').add({
@@ -188,10 +201,10 @@
                     alert('Error adding notification');
                 }
             };
-            
+
             const handleDeleteVideo = async (id) => {
                 if (!confirm('Are you sure you want to delete this video?')) return;
-                
+
                 try {
                     const db = window.firebaseDb;
                     await db.collection('adminVideos').doc(id).delete();
@@ -202,10 +215,10 @@
                     alert('Error deleting video');
                 }
             };
-            
+
             const handleDeleteNotification = async (id) => {
                 if (!confirm('Are you sure you want to delete this notification?')) return;
-                
+
                 try {
                     const db = window.firebaseDb;
                     await db.collection('adminNotifications').doc(id).delete();
@@ -216,7 +229,7 @@
                     alert('Error deleting notification');
                 }
             };
-            
+
             const handleUpdatePhoneNumber = async () => {
                 try {
                     const db = window.firebaseDb;
@@ -233,7 +246,7 @@
                     alert('Error updating phone number');
                 }
             };
-            
+
             if (!isLoggedIn) {
                 return (
                     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-red-50 to-yellow-50 px-4">
@@ -242,13 +255,13 @@
                                 <h1 className="text-3xl font-bold text-red-900 mb-2">Admin Login</h1>
                                 <p className="text-gray-600 text-sm">Chaturvedi Classes Admin Panel</p>
                             </div>
-                            
+
                             {error && (
                                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm mb-6">
                                     {error}
                                 </div>
                             )}
-                            
+
                             <form onSubmit={handleLogin} className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-semibold text-gray-700 mb-2">Username</label>
@@ -261,7 +274,7 @@
                                         required
                                     />
                                 </div>
-                                
+
                                 <div>
                                     <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
                                     <input
@@ -273,7 +286,7 @@
                                         required
                                     />
                                 </div>
-                                
+
                                 <button
                                     type="submit"
                                     className="w-full bg-red-700 text-white py-3 rounded-xl font-bold text-lg hover:bg-red-800 transition-all duration-300 shadow-md shadow-red-200"
@@ -285,7 +298,7 @@
                     </div>
                 );
             }
-            
+
             return (
                 <div className="min-h-screen bg-gray-50">
                     <header className="bg-white border-b border-gray-200 shadow-sm">
@@ -304,43 +317,39 @@
                             </div>
                         </div>
                     </header>
-                    
+
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                        <div className="flex gap-4 mb-6 border-b border-gray-200">
+                        <div className="flex gap-2 md:gap-4 mb-6 border-b border-gray-200 overflow-x-auto scrollbar-hide">
                             <button
                                 onClick={() => setActiveTab('videos')}
-                                className={`px-4 py-2 font-semibold transition-colors ${
-                                    activeTab === 'videos' ? 'text-red-700 border-b-2 border-red-700' : 'text-gray-600'
-                                }`}
+                                className={`px-3 md:px-4 py-2 font-semibold transition-colors whitespace-nowrap flex-shrink-0 ${activeTab === 'videos' ? 'text-red-700 border-b-2 border-red-700' : 'text-gray-600'
+                                    }`}
                             >
                                 Videos
                             </button>
                             <button
                                 onClick={() => setActiveTab('notifications')}
-                                className={`px-4 py-2 font-semibold transition-colors ${
-                                    activeTab === 'notifications' ? 'text-red-700 border-b-2 border-red-700' : 'text-gray-600'
-                                }`}
+                                className={`px-3 md:px-4 py-2 font-semibold transition-colors whitespace-nowrap flex-shrink-0 ${activeTab === 'notifications' ? 'text-red-700 border-b-2 border-red-700' : 'text-gray-600'
+                                    }`}
                             >
                                 Notifications
                             </button>
                             <button
                                 onClick={() => setActiveTab('settings')}
-                                className={`px-4 py-2 font-semibold transition-colors ${
-                                    activeTab === 'settings' ? 'text-red-700 border-b-2 border-red-700' : 'text-gray-600'
-                                }`}
+                                className={`px-3 md:px-4 py-2 font-semibold transition-colors whitespace-nowrap flex-shrink-0 ${activeTab === 'settings' ? 'text-red-700 border-b-2 border-red-700' : 'text-gray-600'
+                                    }`}
                             >
                                 Settings
                             </button>
                             <button
                                 onClick={() => setActiveTab('users')}
-                                className={`px-4 py-2 font-semibold transition-colors ${
-                                    activeTab === 'users' ? 'text-red-700 border-b-2 border-red-700' : 'text-gray-600'
-                                }`}
+                                className={`px-3 md:px-4 py-2 font-semibold transition-colors whitespace-nowrap flex-shrink-0 ${activeTab === 'users' ? 'text-red-700 border-b-2 border-red-700' : 'text-gray-600'
+                                    }`}
                             >
                                 Users ({users.length})
                             </button>
                         </div>
-                        
+
                         {activeTab === 'videos' && (
                             <div className="space-y-6">
                                 <div className="bg-white rounded-2xl border border-gray-200 p-6">
@@ -390,7 +399,7 @@
                                         </button>
                                     </form>
                                 </div>
-                                
+
                                 <div className="bg-white rounded-2xl border border-gray-200 p-6">
                                     <h2 className="text-xl font-bold text-gray-900 mb-4">All Videos</h2>
                                     <div className="space-y-4">
@@ -416,7 +425,7 @@
                                 </div>
                             </div>
                         )}
-                        
+
                         {activeTab === 'notifications' && (
                             <div className="space-y-6">
                                 <div className="bg-white rounded-2xl border border-gray-200 p-6">
@@ -466,7 +475,7 @@
                                         </button>
                                     </form>
                                 </div>
-                                
+
                                 <div className="bg-white rounded-2xl border border-gray-200 p-6">
                                     <h2 className="text-xl font-bold text-gray-900 mb-4">All Notifications</h2>
                                     <div className="space-y-4">
@@ -492,7 +501,7 @@
                                 </div>
                             </div>
                         )}
-                        
+
                         {activeTab === 'settings' && (
                             <div className="bg-white rounded-2xl border border-gray-200 p-6">
                                 <h2 className="text-xl font-bold text-gray-900 mb-4">Help Phone Number</h2>
@@ -516,11 +525,11 @@
                                 </div>
                             </div>
                         )}
-                        
+
                         {activeTab === 'users' && (
                             <div className="bg-white rounded-2xl border border-gray-200 p-4 md:p-6">
                                 <h2 className="text-xl font-bold text-gray-900 mb-4">All Users ({users.length})</h2>
-                                <div className="overflow-x-auto -mx-4 md:mx-0">
+                                <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
                                     <div className="min-w-full inline-block align-middle">
                                         <table className="w-full text-sm">
                                             <thead>
@@ -534,16 +543,19 @@
                                             <tbody>
                                                 {users.map((user) => (
                                                     <tr key={user.id} className="border-b border-gray-100">
-                                                        <td className="py-2 px-2 md:px-4 text-gray-900 text-xs md:text-sm">{user.name || 'N/A'}</td>
-                                                        <td className="py-2 px-2 md:px-4 text-gray-600 text-xs md:text-sm break-all">{user.email || 'N/A'}</td>
-                                                        <td className="py-2 px-2 md:px-4 text-gray-600 text-xs md:text-sm">{user.class || 'N/A'}</td>
-                                                        <td className="py-2 px-2 md:px-4 text-gray-600 text-xs md:text-sm">{user.phone || 'N/A'}</td>
+                                                        <td className="py-2 px-2 md:px-4 text-gray-900 text-xs md:text-sm">{user.name}</td>
+                                                        <td className="py-2 px-2 md:px-4 text-gray-600 text-xs md:text-sm break-all">{user.email}</td>
+                                                        <td className="py-2 px-2 md:px-4 text-gray-600 text-xs md:text-sm">{user.class}</td>
+                                                        <td className="py-2 px-2 md:px-4 text-gray-600 text-xs md:text-sm">{user.phone}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
                                         </table>
                                         {users.length === 0 && (
-                                            <p className="text-gray-500 text-center py-8">No users found</p>
+                                            <div className="text-center py-8">
+                                                <p className="text-gray-500 mb-2">No users found</p>
+                                                <p className="text-xs text-gray-400">Users will appear here after they sign up</p>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
@@ -553,10 +565,10 @@
                 </div>
             );
         }
-        
+
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<AdminPanel />);
     </script>
 </body>
-</html>
 
+</html>
