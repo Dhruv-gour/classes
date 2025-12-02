@@ -19,6 +19,8 @@
     <script src="https://www.gstatic.com/firebasejs/12.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.6.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.6.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.6.0/firebase-messaging-compat.js"></script>
     <script>
         // Your web app's Firebase configuration
         const firebaseConfig = {
@@ -37,6 +39,14 @@
         // Make Firebase available globally
         window.firebaseAuth = firebase.auth();
         window.firebaseDb = firebase.firestore();
+        window.firebaseRtdb = firebase.database();
+
+        // Initialize Messaging
+        try {
+            window.firebaseMessaging = firebase.messaging();
+        } catch (e) {
+            console.log("Firebase Messaging not supported in this browser:", e);
+        }
 
         // Enable Firestore persistence for faster offline access
         try {
@@ -843,6 +853,27 @@
             const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
             const [touchStart, setTouchStart] = useState(null);
             const [touchEnd, setTouchEnd] = useState(null);
+            const [helpPhoneNumber, setHelpPhoneNumber] = useState(localStorage.getItem('helpPhoneNumber') || '+1234567890');
+
+            // Listen for help phone number changes
+            useEffect(() => {
+                const rtdb = window.firebaseRtdb;
+                const phoneRef = rtdb.ref('settings/helpPhoneNumber');
+
+                const handleData = (snapshot) => {
+                    const val = snapshot.val();
+                    if (val) {
+                        setHelpPhoneNumber(val);
+                        localStorage.setItem('helpPhoneNumber', val);
+                    }
+                };
+
+                phoneRef.on('value', handleData);
+
+                return () => {
+                    phoneRef.off('value', handleData);
+                };
+            }, []);
 
             // Check for unread notifications
             useEffect(() => {
@@ -1325,7 +1356,7 @@
                                     >
                                         <div className="flex gap-2 pb-2 px-2 pt-3" style={{ width: 'max-content' }}>
                                             <a
-                                                href={`tel:${localStorage.getItem('helpPhoneNumber') || '+1234567890'}`}
+                                                href={`tel:${helpPhoneNumber}`}
                                                 className="flex-shrink-0 flex flex-col items-center justify-center gap-1.5 w-20 h-20 bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-red-300 transition-all duration-300 group"
                                             >
                                                 <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center group-hover:bg-red-200 transition-colors">
@@ -2638,9 +2669,9 @@
                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                                     <div>
                                         <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">
-                                            Class {selectedClass} <span className="text-red-700">PYQs</span>
+                                            Class {selectedClass} <span className="text-red-700">PYPs</span>
                                         </h2>
-                                        <p className="text-gray-500 text-sm">Download Previous Year Questions</p>
+                                        <p className="text-gray-500 text-sm">Download Previous Year Question Papers</p>
                                     </div>
                                     <div className="relative w-full md:w-72">
                                         <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -3083,9 +3114,45 @@
             );
         }
 
+        // --- Push Notification Logic ---
+        const initializePushNotifications = async (userId) => {
+            if (!window.firebaseMessaging) return;
+
+            try {
+                const messaging = window.firebaseMessaging;
+
+                // Request permission
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    console.log('Notification permission granted.');
+
+                    // Get Token
+                    const token = await messaging.getToken({
+                        vapidKey: 'BJCYS5m8FycB44kLL9BHrwaFmL5BPm2eGLtCnaJ7MR1gNA2x6Mp1ZNC9xNXUssmTtxLGM2trs6W25XDJryLu7E0'
+                    });
+
+                    if (token) {
+                        console.log('FCM Token:', token);
+                        // Save token to Realtime Database
+                        const rtdb = window.firebaseRtdb;
+                        await rtdb.ref(`fcmTokens/${userId}/token`).set(token);
+
+                        // Also save a timestamp
+                        await rtdb.ref(`fcmTokens/${userId}/lastUpdated`).set(firebase.database.ServerValue.TIMESTAMP);
+                    } else {
+                        console.log('No registration token available. Request permission to generate one.');
+                    }
+                } else {
+                    console.log('Unable to get permission to notify.');
+                }
+            } catch (error) {
+                console.error('An error occurred while retrieving token. ', error);
+            }
+        };
+
         // --- Main App Component (Router) ---
         // 🔧 TESTING MODE: Set to false to enable login page, true to skip login
-        const DISABLE_LOGIN_FOR_TESTING = false;
+        const DISABLE_LOGIN_FOR_TESTING = true;
 
         function App() {
             const [currentView, setCurrentView] = useState(DISABLE_LOGIN_FOR_TESTING ? 'home' : 'login'); // 'login', 'home', 'library', 'profile', 'quiz', 'ai', 'features', 'location', 'notifications', 'allclasses', 'pyq'
@@ -3129,6 +3196,9 @@
                                 // User is signed in - use cached data first (fast)
                                 const cachedUsername = localStorage.getItem('username');
                                 const displayName = cachedUsername || user.email.split('@')[0];
+
+                                // Initialize Push Notifications
+                                initializePushNotifications(user.uid);
 
                                 // Update UI immediately with cached data
                                 setUsername(displayName);
