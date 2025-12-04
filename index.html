@@ -900,6 +900,14 @@
         // --- Home Page Component ---
         const GEMINI_API_KEY = "AIzaSyB_RQkwhGIVyfI2DbO0yCklWSEyU7ZV_hg";
 
+        // Function to check notification permission status
+        const checkNotificationPermission = () => {
+            if (!('Notification' in window)) {
+                return 'unsupported';
+            }
+            return Notification.permission;
+        };
+
         function HomePage({ onNavigateToLibrary, username, onLogout, onNavigateToProfile, onNavigateToQuiz, onNavigateToAI, onNavigateToFeatures, onNavigateToLocation, onNavigateToNotifications, onNavigateToAllClasses, onNavigateToPYQ, onNavigateToMindMap }) {
             const [isNavOpen, setIsNavOpen] = useState(false);
             const [profilePicture, setProfilePicture] = useState(localStorage.getItem('profilePicture') || '');
@@ -3799,13 +3807,7 @@
             }
         };
 
-        // Function to check notification permission status
-        const checkNotificationPermission = () => {
-            if (!('Notification' in window)) {
-                return 'unsupported';
-            }
-            return Notification.permission;
-        };
+
 
         // --- Main App Component (Router) ---
         // 🔧 TESTING MODE: Set to false to enable login page, true to skip login
