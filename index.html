@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="screen-orientation" content="portrait">
     <meta name="orientation" content="portrait">
-    <title>Chaturvedi Classes - NCERT Library</title>
+    <title>Chaturvedi Classes</title>
     <!-- Load necessary libraries -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -365,109 +365,144 @@
 
             // Firebase is available globally via window.firebaseAuth and window.firebaseDb
 
+            // Handle Redirect Result on Component Mount
+            useEffect(() => {
+                const checkRedirectResult = async () => {
+                    const auth = window.firebaseAuth;
+                    const db = window.firebaseDb;
+
+                    try {
+                        const result = await auth.getRedirectResult();
+
+                        if (result.user) {
+                            setIsLoading(true);
+                            const user = result.user;
+
+                            // Check if this is a new user
+                            const isNewUser = result.additionalUserInfo.isNewUser;
+
+                            // Get user data
+                            const displayName = user.displayName || user.email?.split('@')[0] || 'User';
+                            const email = user.email || '';
+                            const photoURL = user.photoURL || '';
+                            const phoneNumber = user.phoneNumber || '';
+
+                            // Store in localStorage
+                            localStorage.setItem('username', displayName);
+                            localStorage.setItem('userEmail', email);
+                            localStorage.setItem('userId', user.uid);
+                            if (photoURL) localStorage.setItem('userPhoto', photoURL);
+                            if (phoneNumber) localStorage.setItem('userPhone', phoneNumber);
+
+                            if (isNewUser) {
+                                // New user signup
+                                localStorage.setItem('isNewUser', 'true');
+
+                                // Store user data in Firestore - only essential fields
+                                const userData = {
+                                    name: displayName,
+                                    email: email,
+                                    phone: phoneNumber,
+                                    photoURL: photoURL,
+                                    class: '', // Will be set in profile
+                                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                                    lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                                };
+
+                                try {
+                                    await db.collection("users").doc(user.uid).set(userData);
+                                    console.log("✅ New user data saved to Firestore:", user.uid);
+                                } catch (firestoreError) {
+                                    console.error("❌ Error saving to Firestore:", firestoreError);
+                                    // Continue even if Firestore fails - data is in localStorage
+                                }
+
+                                // Redirect to profile page for new users
+                                onLogin(displayName, true);
+                            } else {
+                                // Existing user login
+                                const userDoc = await db.collection("users").doc(user.uid).get();
+                                let finalDisplayName = displayName;
+
+                                if (userDoc.exists) {
+                                    const userData = userDoc.data();
+                                    finalDisplayName = userData.name || displayName;
+
+                                    // Update last login and sync data - only essential fields
+                                    try {
+                                        await db.collection("users").doc(user.uid).update({
+                                            lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
+                                            email: email,
+                                            photoURL: photoURL,
+                                            name: displayName
+                                        });
+                                        console.log("✅ Last login updated in Firestore");
+                                    } catch (err) {
+                                        console.error("❌ Error updating last login:", err);
+                                    }
+                                } else {
+                                    // Create user doc if doesn't exist - only essential fields
+                                    const newUserData = {
+                                        name: displayName,
+                                        email: email,
+                                        phone: phoneNumber,
+                                        photoURL: photoURL,
+                                        class: '',
+                                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                                        lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                                    };
+
+                                    try {
+                                        await db.collection("users").doc(user.uid).set(newUserData);
+                                        console.log("✅ User data saved to Firestore:", user.uid);
+                                    } catch (firestoreError) {
+                                        console.error("❌ Error saving user to Firestore:", firestoreError);
+                                    }
+                                }
+
+                                // Update localStorage
+                                localStorage.setItem('username', finalDisplayName);
+                                localStorage.setItem('userEmail', email);
+                                if (photoURL) localStorage.setItem('userPhoto', photoURL);
+
+                                // Redirect to home
+                                onLogin(finalDisplayName, false);
+                            }
+                        }
+                    } catch (error) {
+                        setIsLoading(false);
+                        console.error("Redirect Sign-In error:", error);
+
+                        let errorMessage = "Failed to sign in. Please try again.";
+
+                        if (error.code === "auth/popup-closed-by-user") {
+                            errorMessage = "Sign-in was cancelled. Please try again.";
+                        } else if (error.code === "auth/popup-blocked") {
+                            errorMessage = "Popup was blocked. Please allow popups and try again.";
+                        } else if (error.code === "auth/operation-not-allowed") {
+                            errorMessage = "Google sign-in is not enabled. Please contact administrator.";
+                        } else if (error.message) {
+                            errorMessage = error.message;
+                        }
+
+                        setError(errorMessage);
+                    }
+                };
+
+                checkRedirectResult();
+            }, [onLogin]);
+
             const handleGoogleSignIn = async () => {
                 setError("");
                 setIsLoading(true);
 
                 try {
                     const auth = window.firebaseAuth;
-                    const db = window.firebaseDb;
                     const provider = new firebase.auth.GoogleAuthProvider();
 
-                    // Sign in with Google
-                    const result = await auth.signInWithPopup(provider);
-                    const user = result.user;
+                    // Sign in with Redirect
+                    await auth.signInWithRedirect(provider);
 
-                    // Check if this is a new user
-                    const isNewUser = result.additionalUserInfo.isNewUser;
-
-                    // Get user data
-                    const displayName = user.displayName || user.email?.split('@')[0] || 'User';
-                    const email = user.email || '';
-                    const photoURL = user.photoURL || '';
-                    const phoneNumber = user.phoneNumber || '';
-
-                    // Store in localStorage
-                    localStorage.setItem('username', displayName);
-                    localStorage.setItem('userEmail', email);
-                    localStorage.setItem('userId', user.uid);
-                    if (photoURL) localStorage.setItem('userPhoto', photoURL);
-                    if (phoneNumber) localStorage.setItem('userPhone', phoneNumber);
-
-                    if (isNewUser) {
-                        // New user signup
-                        localStorage.setItem('isNewUser', 'true');
-
-                        // Store user data in Firestore - only essential fields
-                        const userData = {
-                            name: displayName,
-                            email: email,
-                            phone: phoneNumber,
-                            photoURL: photoURL,
-                            class: '', // Will be set in profile
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                            lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-                        };
-
-                        try {
-                            await db.collection("users").doc(user.uid).set(userData);
-                            console.log("✅ New user data saved to Firestore:", user.uid);
-                        } catch (firestoreError) {
-                            console.error("❌ Error saving to Firestore:", firestoreError);
-                            // Continue even if Firestore fails - data is in localStorage
-                        }
-
-                        // Redirect to profile page for new users
-                        onLogin(displayName, true);
-                    } else {
-                        // Existing user login
-                        const userDoc = await db.collection("users").doc(user.uid).get();
-                        let finalDisplayName = displayName;
-
-                        if (userDoc.exists) {
-                            const userData = userDoc.data();
-                            finalDisplayName = userData.name || displayName;
-
-                            // Update last login and sync data - only essential fields
-                            try {
-                                await db.collection("users").doc(user.uid).update({
-                                    lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
-                                    email: email,
-                                    photoURL: photoURL,
-                                    name: displayName
-                                });
-                                console.log("✅ Last login updated in Firestore");
-                            } catch (err) {
-                                console.error("❌ Error updating last login:", err);
-                            }
-                        } else {
-                            // Create user doc if doesn't exist - only essential fields
-                            const newUserData = {
-                                name: displayName,
-                                email: email,
-                                phone: phoneNumber,
-                                photoURL: photoURL,
-                                class: '',
-                                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-                            };
-
-                            try {
-                                await db.collection("users").doc(user.uid).set(newUserData);
-                                console.log("✅ User data saved to Firestore:", user.uid);
-                            } catch (firestoreError) {
-                                console.error("❌ Error saving user to Firestore:", firestoreError);
-                            }
-                        }
-
-                        // Update localStorage
-                        localStorage.setItem('username', finalDisplayName);
-                        localStorage.setItem('userEmail', email);
-                        if (photoURL) localStorage.setItem('userPhoto', photoURL);
-
-                        // Redirect to home
-                        onLogin(finalDisplayName, false);
-                    }
                 } catch (error) {
                     setIsLoading(false);
                     console.error("Google Sign-In error:", error);
