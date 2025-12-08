@@ -41,6 +41,42 @@
         window.firebaseDb = firebase.firestore();
         window.firebaseRtdb = firebase.database();
 
+        // --- GLOBAL REDIRECT HANDLER (Added as requested) ---
+        firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+        firebase.auth().getRedirectResult().then((result) => {
+            if (result.user) {
+                console.log("Global Redirect Handler: User logged in:", result.user);
+
+                const user = result.user;
+                const isNewUser = result.additionalUserInfo ? result.additionalUserInfo.isNewUser : false;
+                const displayName = user.displayName || user.email?.split('@')[0] || 'User';
+
+                // Store Data (Mirroring App logic)
+                window.localStorage.setItem('username', displayName);
+                window.localStorage.setItem('userEmail', user.email || '');
+                window.localStorage.setItem('userId', user.uid);
+                window.localStorage.setItem("isLoggedIn", "true");
+
+                if (user.photoURL) window.localStorage.setItem('userPhoto', user.photoURL);
+                if (user.phoneNumber) window.localStorage.setItem('userPhone', user.phoneNumber);
+
+                if (isNewUser) {
+                    window.localStorage.setItem('isNewUser', 'true');
+                    // Note: Firestore saving for new user is handled by the App component's listener
+                }
+            }
+        }).catch((error) => {
+            console.error("Redirect error:", error);
+        });
+
+        // Ensure session persistence listener
+        firebase.auth().onAuthStateChanged((user) => {
+            if (user) {
+                window.localStorage.setItem("isLoggedIn", "true");
+            }
+        });
+
         // Initialize Messaging
         try {
             window.firebaseMessaging = firebase.messaging();
@@ -3321,97 +3357,6 @@
                     const auth = window.firebaseAuth;
                     const db = window.firebaseDb;
 
-                    // 1. Check for Redirect Result (Handle return from Google Login)
-                    try {
-                        const result = await auth.getRedirectResult();
-                        if (result.user) {
-                            console.log("User logged in:", result.user);
-                            window.localStorage.setItem("isLoggedIn", "true");
-
-                            const user = result.user;
-                            const isNewUser = result.additionalUserInfo?.isNewUser;
-                            const displayName = user.displayName || user.email?.split('@')[0] || 'User';
-                            const email = user.email || '';
-                            const photoURL = user.photoURL || '';
-                            const phoneNumber = user.phoneNumber || '';
-
-                            console.log("Redirect login successful:", user.uid);
-
-                            // Store in localStorage
-                            localStorage.setItem('username', displayName);
-                            localStorage.setItem('userEmail', email);
-                            localStorage.setItem('userId', user.uid);
-                            if (photoURL) localStorage.setItem('userPhoto', photoURL);
-                            if (phoneNumber) localStorage.setItem('userPhone', phoneNumber);
-
-                            if (isNewUser) {
-                                localStorage.setItem('isNewUser', 'true');
-                                // Firestore Save Logic
-                                const userData = {
-                                    name: displayName,
-                                    email: email,
-                                    phone: phoneNumber,
-                                    photoURL: photoURL,
-                                    class: '',
-                                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                                    lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-                                };
-                                try {
-                                    await db.collection("users").doc(user.uid).set(userData);
-                                    console.log("✅ New user data saved to Firestore:", user.uid);
-                                } catch (e) { console.error("Firestore Error:", e) }
-
-                                handleLogin(displayName, true);
-                            } else {
-                                // Existing user logic
-                                try {
-                                    // Try to update existing doc
-                                    await db.collection("users").doc(user.uid).update({
-                                        lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
-                                        email: email,
-                                        photoURL: photoURL,
-                                        name: displayName
-                                    });
-                                    console.log("✅ Last login updated");
-                                } catch (e) {
-                                    // If doc doesn't exist, create it (fallback)
-                                    const newUserData = {
-                                        name: displayName,
-                                        email: email,
-                                        phone: phoneNumber,
-                                        photoURL: photoURL,
-                                        class: '',
-                                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                                        lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-                                    };
-                                    try {
-                                        await db.collection("users").doc(user.uid).set(newUserData);
-                                        console.log("✅ Created missing user doc");
-                                    } catch (e2) { console.error(e2); }
-                                }
-
-                                // Sync correct name from DB if possible
-                                try {
-                                    const userDoc = await db.collection("users").doc(user.uid).get();
-                                    if (userDoc.exists) {
-                                        const data = userDoc.data();
-                                        if (data.name) {
-                                            localStorage.setItem('username', data.name);
-                                            handleLogin(data.name, false);
-                                            return;
-                                        }
-                                    }
-                                } catch (e) { }
-
-                                handleLogin(displayName, false);
-                            }
-                            setIsCheckingAuth(false);
-                            return; // Successfully handled redirect
-                        }
-                    } catch (error) {
-                        console.error("Redirect check error:", error);
-                    }
-
                     // 2. Standard Auth State Listener
                     try {
                         firebase.auth().onAuthStateChanged((user) => {
@@ -3420,12 +3365,23 @@
                                 const cachedUsername = localStorage.getItem('username');
                                 const displayName = cachedUsername || user.email.split('@')[0];
 
+                                // Check for new user flag from global handler
+                                const isNewUser = localStorage.getItem('isNewUser') === 'true';
+
                                 // Initialize Push Notifications
                                 initializePushNotifications(user.uid);
 
-                                // Update UI immediately with cached data
+                                // Update UI immediately
                                 setUsername(displayName);
-                                setCurrentView('home');
+
+                                // Redirect logic
+                                if (isNewUser && currentView !== 'profile') {
+                                    setCurrentView('profile');
+                                    // We don't clear isNewUser here immediately, ProfileEditPage does it on save
+                                } else if (currentView === 'login') {
+                                    setCurrentView('home');
+                                }
+
                                 setIsCheckingAuth(false);
 
                                 // Fetch fresh data from Firestore in background (non-blocking)
