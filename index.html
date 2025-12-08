@@ -3285,9 +3285,10 @@
         function App() {
             // Optimistic Initial State from LocalStorage
             const savedUser = localStorage.getItem('username');
-            const [currentView, setCurrentView] = useState((DISABLE_LOGIN_FOR_TESTING || savedUser) ? 'home' : 'login'); // 'login', 'home', 'library', 'profile', 'quiz', 'ai', 'features', 'location', 'notifications', 'allclasses', 'pyq', 'mindmap'
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            const [currentView, setCurrentView] = useState((DISABLE_LOGIN_FOR_TESTING || savedUser || isLoggedIn) ? 'home' : 'login'); // 'login', 'home', 'library', 'profile', 'quiz', 'ai', 'features', 'location', 'notifications', 'allclasses', 'pyq', 'mindmap'
             const [username, setUsername] = useState((DISABLE_LOGIN_FOR_TESTING ? 'Test User' : savedUser) || '');
-            const [isCheckingAuth, setIsCheckingAuth] = useState(!DISABLE_LOGIN_FOR_TESTING && !savedUser);
+            const [isCheckingAuth, setIsCheckingAuth] = useState(!DISABLE_LOGIN_FOR_TESTING && !savedUser && !isLoggedIn);
 
             // Handle mobile back button - navigate to home if not on home/login
             useEffect(() => {
@@ -3324,6 +3325,9 @@
                     try {
                         const result = await auth.getRedirectResult();
                         if (result.user) {
+                            console.log("User logged in:", result.user);
+                            window.localStorage.setItem("isLoggedIn", "true");
+
                             const user = result.user;
                             const isNewUser = result.additionalUserInfo?.isNewUser;
                             const displayName = user.displayName || user.email?.split('@')[0] || 'User';
