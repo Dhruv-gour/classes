@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="screen-orientation" content="portrait">
     <meta name="orientation" content="portrait">
-    <title>Chaturvedi Classes</title>
+    <title>Chaturvedi Classes - NCERT Library</title>
     <!-- Load necessary libraries -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -21,6 +21,18 @@
     <script src="https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.6.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.6.0/firebase-messaging-compat.js"></script>
+
+    <!-- Supabase SDK -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script>
+        const supabaseUrl = 'https://zbkgsjhhleqrrvtfwaxw.supabase.co'
+        const supabaseKey = 'sb_publishable_Pj5veRk50Az4h2ChQmMkmA_Mn1UhoJc'
+        // Initialize Supabase client
+        // The supabase-js library exposes 'supabase' globally
+        const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey)
+        // Make the client available globally
+        window.supabaseClient = supabaseClient;
+    </script>
     <script>
         // Your web app's Firebase configuration
         const firebaseConfig = {
@@ -40,42 +52,6 @@
         window.firebaseAuth = firebase.auth();
         window.firebaseDb = firebase.firestore();
         window.firebaseRtdb = firebase.database();
-
-        // --- GLOBAL REDIRECT HANDLER (Added as requested) ---
-        firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-
-        firebase.auth().getRedirectResult().then((result) => {
-            if (result.user) {
-                console.log("Global Redirect Handler: User logged in:", result.user);
-
-                const user = result.user;
-                const isNewUser = result.additionalUserInfo ? result.additionalUserInfo.isNewUser : false;
-                const displayName = user.displayName || user.email?.split('@')[0] || 'User';
-
-                // Store Data (Mirroring App logic)
-                window.localStorage.setItem('username', displayName);
-                window.localStorage.setItem('userEmail', user.email || '');
-                window.localStorage.setItem('userId', user.uid);
-                window.localStorage.setItem("isLoggedIn", "true");
-
-                if (user.photoURL) window.localStorage.setItem('userPhoto', user.photoURL);
-                if (user.phoneNumber) window.localStorage.setItem('userPhone', user.phoneNumber);
-
-                if (isNewUser) {
-                    window.localStorage.setItem('isNewUser', 'true');
-                    // Note: Firestore saving for new user is handled by the App component's listener
-                }
-            }
-        }).catch((error) => {
-            console.error("Redirect error:", error);
-        });
-
-        // Ensure session persistence listener
-        firebase.auth().onAuthStateChanged((user) => {
-            if (user) {
-                window.localStorage.setItem("isLoggedIn", "true");
-            }
-        });
 
         // Initialize Messaging
         try {
@@ -153,23 +129,33 @@
     <script>
         // Global restriction script
         const preventDefault = (e) => {
+            // Allow interaction with inputs and textareas
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+                return true;
+            }
             e.preventDefault();
             e.stopPropagation();
             return false;
         };
 
-        // Disable right-click context menu
+        // Disable right-click context menu (allow for inputs if needed, or keep disabled)
+        // Usually right click on input is useful for paste, so let's allow it for inputs
         document.addEventListener('contextmenu', preventDefault, true);
 
         // Disable text selection
         document.addEventListener('selectstart', preventDefault, true);
+
+        // Smart selection change handling
         document.addEventListener('selectionchange', () => {
-            if (window.getSelection) {
+            const active = document.activeElement;
+            const isInput = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable);
+
+            if (!isInput && window.getSelection) {
                 window.getSelection().removeAllRanges();
             }
         }, true);
 
-        // Disable copy, cut, paste
+        // Disable copy, cut, paste but allow for inputs
         document.addEventListener('copy', preventDefault, true);
         document.addEventListener('cut', preventDefault, true);
         document.addEventListener('paste', preventDefault, true);
@@ -179,7 +165,10 @@
         document.addEventListener('drop', preventDefault, true);
 
         // Prevent long press on mobile
-        window.oncontextmenu = function (event) {
+        window.oncontextmenu = (event) => {
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' || event.target.isContentEditable) {
+                return true;
+            }
             event.preventDefault();
             event.stopPropagation();
             return false;
@@ -398,6 +387,102 @@
         function LoginPage({ onLogin }) {
             const [error, setError] = useState("");
             const [isLoading, setIsLoading] = useState(false);
+            const [otpEmail, setOtpEmail] = useState("");
+            const [otpCode, setOtpCode] = useState("");
+            const [showOtpInput, setShowOtpInput] = useState(false);
+
+            const [otpMessage, setOtpMessage] = useState({ type: '', text: '' });
+            const [isSendingOtp, setIsSendingOtp] = useState(false);
+
+            const handleSendOtp = async () => {
+                const email = otpEmail.trim();
+                setOtpMessage({ type: '', text: '' });
+
+                if (!email) {
+                    setOtpMessage({ type: 'error', text: 'Please enter your email' });
+                    return;
+                }
+
+                setIsSendingOtp(true);
+                try {
+                    const { error } = await window.supabaseClient.auth.signInWithOtp({ email: email });
+                    if (error) throw error;
+
+                    setOtpMessage({ type: 'success', text: 'OTP sent to your email' });
+                    setShowOtpInput(true);
+                } catch (err) {
+                    setOtpMessage({ type: 'error', text: err.message });
+                } finally {
+                    setIsSendingOtp(false);
+                }
+            };
+
+            const handleVerifyOtp = async () => {
+                const email = otpEmail.trim();
+                const token = otpCode.trim();
+                setOtpMessage({ type: '', text: '' });
+
+                if (!email || !token) {
+                    setOtpMessage({ type: 'error', text: 'Please enter both email and OTP' });
+                    return;
+                }
+
+                setIsLoading(true);
+                try {
+                    const { data, error } = await window.supabaseClient.auth.verifyOtp({
+                        email: email,
+                        token: token,
+                        type: 'email'
+                    });
+
+                    if (error) throw error;
+
+                    const user = data.user;
+                    if (user) {
+                        // Process user data similar to Google login
+                        const db = window.firebaseDb;
+                        const displayName = user.user_metadata?.full_name || email.split('@')[0];
+                        const photoURL = user.user_metadata?.avatar_url || '';
+
+                        // Store in localStorage
+                        localStorage.setItem('username', displayName);
+                        localStorage.setItem('userEmail', email);
+                        localStorage.setItem('userId', user.id);
+                        if (photoURL) localStorage.setItem('userPhoto', photoURL);
+
+                        // Check Firestore for user existence
+                        const userRef = db.collection("users").doc(user.id);
+                        const userDoc = await userRef.get();
+
+                        if (userDoc.exists) {
+                            // Existing user
+                            await userRef.update({
+                                lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
+                                email: email
+                            });
+                            onLogin(userDoc.data().name || displayName, false);
+                        } else {
+                            // New user
+                            localStorage.setItem('isNewUser', 'true');
+                            const userData = {
+                                name: displayName,
+                                email: email,
+                                phone: '',
+                                photoURL: photoURL,
+                                class: '',
+                                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                            };
+
+                            await userRef.set(userData);
+                            onLogin(displayName, true);
+                        }
+                    }
+                } catch (err) {
+                    setOtpMessage({ type: 'error', text: err.message });
+                    setIsLoading(false);
+                }
+            };
 
             // Firebase is available globally via window.firebaseAuth and window.firebaseDb
 
@@ -407,11 +492,103 @@
 
                 try {
                     const auth = window.firebaseAuth;
+                    const db = window.firebaseDb;
                     const provider = new firebase.auth.GoogleAuthProvider();
 
-                    // Sign in with Redirect
-                    await auth.signInWithRedirect(provider);
+                    // Sign in with Google
+                    const result = await auth.signInWithPopup(provider);
+                    const user = result.user;
 
+                    // Check if this is a new user
+                    const isNewUser = result.additionalUserInfo.isNewUser;
+
+                    // Get user data
+                    const displayName = user.displayName || user.email?.split('@')[0] || 'User';
+                    const email = user.email || '';
+                    const photoURL = user.photoURL || '';
+                    const phoneNumber = user.phoneNumber || '';
+
+                    // Store in localStorage
+                    localStorage.setItem('username', displayName);
+                    localStorage.setItem('userEmail', email);
+                    localStorage.setItem('userId', user.uid);
+                    if (photoURL) localStorage.setItem('userPhoto', photoURL);
+                    if (phoneNumber) localStorage.setItem('userPhone', phoneNumber);
+
+                    if (isNewUser) {
+                        // New user signup
+                        localStorage.setItem('isNewUser', 'true');
+
+                        // Store user data in Firestore - only essential fields
+                        const userData = {
+                            name: displayName,
+                            email: email,
+                            phone: phoneNumber,
+                            photoURL: photoURL,
+                            class: '', // Will be set in profile
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                        };
+
+                        try {
+                            await db.collection("users").doc(user.uid).set(userData);
+                            console.log("✅ New user data saved to Firestore:", user.uid);
+                        } catch (firestoreError) {
+                            console.error("❌ Error saving to Firestore:", firestoreError);
+                            // Continue even if Firestore fails - data is in localStorage
+                        }
+
+                        // Redirect to profile page for new users
+                        onLogin(displayName, true);
+                    } else {
+                        // Existing user login
+                        const userDoc = await db.collection("users").doc(user.uid).get();
+                        let finalDisplayName = displayName;
+
+                        if (userDoc.exists) {
+                            const userData = userDoc.data();
+                            finalDisplayName = userData.name || displayName;
+
+                            // Update last login and sync data - only essential fields
+                            try {
+                                await db.collection("users").doc(user.uid).update({
+                                    lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
+                                    email: email,
+                                    photoURL: photoURL,
+                                    name: displayName
+                                });
+                                console.log("✅ Last login updated in Firestore");
+                            } catch (err) {
+                                console.error("❌ Error updating last login:", err);
+                            }
+                        } else {
+                            // Create user doc if doesn't exist - only essential fields
+                            const newUserData = {
+                                name: displayName,
+                                email: email,
+                                phone: phoneNumber,
+                                photoURL: photoURL,
+                                class: '',
+                                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                            };
+
+                            try {
+                                await db.collection("users").doc(user.uid).set(newUserData);
+                                console.log("✅ User data saved to Firestore:", user.uid);
+                            } catch (firestoreError) {
+                                console.error("❌ Error saving user to Firestore:", firestoreError);
+                            }
+                        }
+
+                        // Update localStorage
+                        localStorage.setItem('username', finalDisplayName);
+                        localStorage.setItem('userEmail', email);
+                        if (photoURL) localStorage.setItem('userPhoto', photoURL);
+
+                        // Redirect to home
+                        onLogin(finalDisplayName, false);
+                    }
                 } catch (error) {
                     setIsLoading(false);
                     console.error("Google Sign-In error:", error);
@@ -457,13 +634,88 @@
                             </div>
 
                             {/* Error Message */}
-                            {error && (
-                                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm mb-6">
-                                    {error}
+                            {(error || otpMessage.text) && (
+                                <div className={`px-4 py-3 rounded-xl text-sm mb-6 border ${otpMessage.type === 'success'
+                                    ? 'bg-green-50 border-green-200 text-green-700'
+                                    : 'bg-red-50 border-red-200 text-red-700'
+                                    }`}>
+                                    {error || otpMessage.text}
                                 </div>
                             )}
 
-                            {/* Google Sign-In Button */}
+                            {/* Email OTP Login Section */}
+                            <div className="space-y-4 mb-6">
+                                <div>
+                                    <label htmlFor="emailInput" className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 ml-1">Email Address</label>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <svg className="h-5 w-5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                                        </div>
+                                        <input
+                                            type="email"
+                                            id="emailInput"
+                                            placeholder="name@example.com"
+                                            value={otpEmail}
+                                            onChange={(e) => setOtpEmail(e.target.value)}
+                                            className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none transition-all duration-200 bg-gray-50 focus:bg-white text-gray-900 placeholder-gray-400"
+                                        />
+                                    </div>
+                                </div>
+                                {!showOtpInput && (
+                                    <button
+                                        id="sendOtpBtn"
+                                        onClick={handleSendOtp}
+                                        disabled={isSendingOtp}
+                                        className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                                    >
+                                        {isSendingOtp ? (
+                                            <>
+                                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                <span>Sending...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span>Send OTP</span>
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                                            </>
+                                        )}
+                                    </button>
+                                )}
+
+                                {showOtpInput && (
+                                    <div className="pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <label htmlFor="otpInput" className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 ml-1">One-Time Password</label>
+                                        <div className="relative mb-4">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <svg className="h-5 w-5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                            </div>
+                                            <input
+                                                type="text"
+                                                id="otpInput"
+                                                placeholder="Enter 6-digit code"
+                                                value={otpCode}
+                                                onChange={(e) => setOtpCode(e.target.value)}
+                                                className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 outline-none transition-all duration-200 bg-gray-50 focus:bg-white text-gray-900 placeholder-gray-400 tracking-widest"
+                                            />
+                                        </div>
+                                        <button
+                                            id="verifyOtpBtn"
+                                            onClick={handleVerifyOtp}
+                                            disabled={isLoading}
+                                            className="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold py-3 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                                        >
+                                            {isLoading ? (
+                                                <div className="w-5 h-5 border-2 border-green-400 border-t-transparent rounded-full animate-spin"></div>
+                                            ) : (
+                                                <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                            )}
+                                            <span>Verify & Login</span>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Google Sign-In Button */}\n
                             <button
                                 onClick={handleGoogleSignIn}
                                 disabled={isLoading}
@@ -538,10 +790,17 @@
                     try {
                         const auth = window.firebaseAuth;
                         const db = window.firebaseDb;
-                        const user = auth.currentUser;
+                        let userId = auth.currentUser?.uid;
+                        let userEmail = auth.currentUser?.email;
 
-                        if (user) {
-                            setEmail(user.email || '');
+                        // Fallback to localStorage if Firebase Auth user is missing (Supabase login)
+                        if (!userId) {
+                            userId = localStorage.getItem('userId');
+                            userEmail = localStorage.getItem('userEmail');
+                        }
+
+                        if (userId) {
+                            setEmail(userEmail || '');
 
                             // Get phone from localStorage or Firestore
                             const cachedPhone = localStorage.getItem('userPhone') || '';
@@ -549,12 +808,12 @@
 
                             // Get user data from Firestore
                             try {
-                                const userDoc = await db.collection("users").doc(user.uid).get();
+                                const userDoc = await db.collection("users").doc(userId).get();
                                 if (userDoc.exists) {
                                     const userData = userDoc.data();
                                     setDisplayName(userData.name || username || '');
                                     setSelectedClass(userData.class || '');
-                                    setEmail(userData.email || user.email || '');
+                                    setEmail(userData.email || userEmail || '');
                                     setPhone(userData.phone || cachedPhone || '');
                                     console.log("✅ Profile data loaded from Firestore:", userData);
                                 } else {
@@ -599,16 +858,21 @@
                 try {
                     const auth = window.firebaseAuth;
                     const db = window.firebaseDb;
-                    const user = auth.currentUser;
+                    let userId = auth.currentUser?.uid;
 
-                    if (!user) {
+                    // Fallback to localStorage if Firebase Auth user is missing (Supabase login)
+                    if (!userId) {
+                        userId = localStorage.getItem('userId');
+                    }
+
+                    if (!userId) {
                         setMessage({ type: 'error', text: 'User not authenticated. Please login again.' });
                         setIsSaving(false);
                         return;
                     }
 
                     // Get existing user data
-                    const userDoc = await db.collection("users").doc(user.uid).get();
+                    const userDoc = await db.collection("users").doc(userId).get();
                     const existingData = userDoc.exists ? userDoc.data() : {};
 
                     // Check if this is a new user
@@ -637,8 +901,8 @@
 
                     // Update Firestore with all data
                     try {
-                        await db.collection("users").doc(user.uid).set(userData, { merge: true });
-                        console.log("✅ Profile data saved to Firestore successfully:", user.uid);
+                        await db.collection("users").doc(userId).set(userData, { merge: true });
+                        console.log("✅ Profile data saved to Firestore successfully:", userId);
                         console.log("Saved data:", userData);
                     } catch (firestoreError) {
                         console.error("❌ Error saving profile to Firestore:", firestoreError);
@@ -864,8 +1128,9 @@
 
                     // Show banner if permission is not granted and user is logged in
                     const auth = window.firebaseAuth;
-                    const user = auth?.currentUser;
-                    if (user && permission !== 'granted' && permission !== 'unsupported') {
+                    const userId = auth?.currentUser?.uid || localStorage.getItem('userId');
+
+                    if (userId && permission !== 'granted' && permission !== 'unsupported') {
                         setShowNotificationBanner(true);
                     } else {
                         setShowNotificationBanner(false);
@@ -884,10 +1149,10 @@
             // Handle notification permission request
             const handleRequestNotificationPermission = async () => {
                 const auth = window.firebaseAuth;
-                const user = auth?.currentUser;
+                const userId = auth?.currentUser?.uid || localStorage.getItem('userId');
 
-                if (user) {
-                    const granted = await initializePushNotifications(user.uid, true);
+                if (userId) {
+                    const granted = await initializePushNotifications(userId, true);
                     if (granted) {
                         setNotificationPermission('granted');
                         setShowNotificationBanner(false);
@@ -3319,12 +3584,9 @@
         const DISABLE_LOGIN_FOR_TESTING = false;
 
         function App() {
-            // Optimistic Initial State from LocalStorage
-            const savedUser = localStorage.getItem('username');
-            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-            const [currentView, setCurrentView] = useState((DISABLE_LOGIN_FOR_TESTING || savedUser || isLoggedIn) ? 'home' : 'login'); // 'login', 'home', 'library', 'profile', 'quiz', 'ai', 'features', 'location', 'notifications', 'allclasses', 'pyq', 'mindmap'
-            const [username, setUsername] = useState((DISABLE_LOGIN_FOR_TESTING ? 'Test User' : savedUser) || '');
-            const [isCheckingAuth, setIsCheckingAuth] = useState(!DISABLE_LOGIN_FOR_TESTING && !savedUser && !isLoggedIn);
+            const [currentView, setCurrentView] = useState(DISABLE_LOGIN_FOR_TESTING ? 'home' : 'login'); // 'login', 'home', 'library', 'profile', 'quiz', 'ai', 'features', 'location', 'notifications', 'allclasses', 'pyq', 'mindmap'
+            const [username, setUsername] = useState(DISABLE_LOGIN_FOR_TESTING ? 'Test User' : '');
+            const [isCheckingAuth, setIsCheckingAuth] = useState(!DISABLE_LOGIN_FOR_TESTING);
 
             // Handle mobile back button - navigate to home if not on home/login
             useEffect(() => {
@@ -3353,35 +3615,23 @@
                     return;
                 }
 
-                const checkAuthState = async () => {
-                    const auth = window.firebaseAuth;
-                    const db = window.firebaseDb;
-
-                    // 2. Standard Auth State Listener
+                const checkAuthState = () => {
                     try {
+                        const auth = window.firebaseAuth;
+                        const db = window.firebaseDb;
+
                         firebase.auth().onAuthStateChanged((user) => {
                             if (user) {
                                 // User is signed in - use cached data first (fast)
                                 const cachedUsername = localStorage.getItem('username');
                                 const displayName = cachedUsername || user.email.split('@')[0];
 
-                                // Check for new user flag from global handler
-                                const isNewUser = localStorage.getItem('isNewUser') === 'true';
-
                                 // Initialize Push Notifications
                                 initializePushNotifications(user.uid);
 
-                                // Update UI immediately
+                                // Update UI immediately with cached data
                                 setUsername(displayName);
-
-                                // Redirect logic
-                                if (isNewUser && currentView !== 'profile') {
-                                    setCurrentView('profile');
-                                    // We don't clear isNewUser here immediately, ProfileEditPage does it on save
-                                } else if (currentView === 'login') {
-                                    setCurrentView('home');
-                                }
-
+                                setCurrentView('home');
                                 setIsCheckingAuth(false);
 
                                 // Fetch fresh data from Firestore in background (non-blocking)
