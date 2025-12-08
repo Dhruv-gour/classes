@@ -692,9 +692,15 @@
                                             <input
                                                 type="text"
                                                 id="otpInput"
+                                                inputMode="numeric"
                                                 placeholder="Enter 6-digit code"
                                                 value={otpCode}
-                                                onChange={(e) => setOtpCode(e.target.value)}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    if (/^\d{0,6}$/.test(val)) {
+                                                        setOtpCode(val);
+                                                    }
+                                                }}
                                                 className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 outline-none transition-all duration-200 bg-gray-50 focus:bg-white text-gray-900 placeholder-gray-400 tracking-widest"
                                             />
                                         </div>
