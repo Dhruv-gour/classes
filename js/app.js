@@ -200,7 +200,9 @@
             const getFcmToken = async () => {
                 try {
                     if (window.firebaseMessaging) {
-                        const currentToken = await window.firebaseMessaging.getToken();
+                         const currentToken = await window.firebaseMessaging.getToken({
+                            vapidKey: 'BJCYS5m8FycB44kLL9BHrwaFmL5BPm2eGLtCnaJ7MR1gNA2x6Mp1ZNC9xNXUssmTtxLGM2trs6W25XDJryLu7E0'
+                        });
                         if (currentToken) {
                             console.log("FCM Token retrieved:", currentToken);
                             return currentToken;
@@ -442,7 +444,7 @@
                         {/* Logo and Title Section */}
                         <div className="text-center mb-8">
                             <div className="flex justify-center mb-6">
-                                <div className="w-24 h-24 flex items-center justify-center overflow-hidden bg-white rounded-full shadow-lg p-3">
+                                <div className="w-24 h-24 flex items-center justify-center overflow-hidden bg-white rounded-full shadow-lg p-1">
                                     <img src="img/logo.png" alt="Chaturvedi Classes Logo" className="w-full h-full object-contain" />
                                 </div>
                             </div>
@@ -3424,6 +3426,16 @@
 
                         // Also save a timestamp
                         await rtdb.ref(`fcmTokens/${userId}/lastUpdated`).set(firebase.database.ServerValue.TIMESTAMP);
+
+                        // Save to Firestore as well
+                        const db = window.firebaseDb;
+                        if (db && userId) {
+                             await db.collection("users").doc(userId).set({
+                                 fcmToken: token
+                             }, { merge: true });
+                             console.log("✅ FCM Token saved to Firestore");
+                        }
+
                         return true;
                     } else {
                         console.log('No registration token available.');
