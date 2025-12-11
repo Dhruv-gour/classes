@@ -63,8 +63,8 @@
                 { title: "Contemporary India", code: "iess1", count: 6, cover: "yellow" },
                 { title: "Economics", code: "iess2", count: 4, cover: "pink" },
                 { title: "India & Contemp. World", code: "iess3", count: 5, cover: "purple" },
-                { title: "Kshitij (Hindi)", code: "ieks1", count: 17, cover: "red" },
-                { title: "Kritika (Hindi)", code: "iekr1", count: 5, cover: "red" },
+                { title: "Kshitij (Hindi)", code: "ihks1", count: 17, cover: "red" },
+                { title: "Kritika (Hindi)", code: "ihkr1", count: 5, cover: "red" },
             ],
             10: [
                 {
@@ -95,8 +95,8 @@
                 { title: "Contemporary India II", code: "jess1", count: 7, cover: "yellow" },
                 { title: "Economics", code: "jess2", count: 5, cover: "pink" },
                 { title: "India & Contemp. World II", code: "jess3", count: 5, cover: "purple" },
-                { title: "Kshitij II (Hindi)", code: "jeks1", count: 17, cover: "red" },
-                { title: "Kritika II (Hindi)", code: "jekr1", count: 5, cover: "red" },
+                { title: "Kshitij II (Hindi)", code: "jhks1", count: 17, cover: "red" },
+                { title: "Kritika II (Hindi)", code: "jhkr1", count: 5, cover: "red" },
             ],
             11: [
                 {
@@ -128,8 +128,8 @@
                 { title: "Chemistry Part II", code: "kech2", count: 7, cover: "teal" },
                 { title: "Hornbill (English)", code: "kehb1", count: 8, cover: "orange" },
                 { title: "Snapshot (English)", code: "kesp1", count: 8, cover: "orange" },
-                { title: "Aroh (Hindi)", code: "kear1", count: 10, cover: "red" },
-                { title: "Vitan (Hindi)", code: "kevt1", count: 4, cover: "red" },
+                { title: "Aroh (Hindi)", code: "khar1", count: 10, cover: "red" },
+                { title: "Vitan (Hindi)", code: "khvt1", count: 4, cover: "red" },
             ],
             12: [
                 {
@@ -167,8 +167,8 @@
                 { title: "Chemistry Part II", code: "lech2", count: 7, cover: "teal" },
                 { title: "Flamingo (English)", code: "lefl1", count: 8, cover: "orange" },
                 { title: "Vistas (English)", code: "levt1", count: 8, cover: "orange" },
-                { title: "Aroh II (Hindi)", code: "lear1", count: 10, cover: "red" },
-                { title: "Vitan II (Hindi)", code: "levt1", count: 4, cover: "red" },
+                { title: "Aroh II (Hindi)", code: "lhar1", count: 10, cover: "red" },
+                { title: "Vitan II (Hindi)", code: "lhvt1", count: 4, cover: "red" },
             ]
         };
 
@@ -692,9 +692,21 @@
                         name: displayName,
                         class: selectedClass,
                         email: email || existingData.email || '',
-                        phone: existingData.phone || localStorage.getItem('userPhone') || '',
+                        phone: phone, // Use the state variable which can be edited
                         lastLogin: firebase.firestore.FieldValue.serverTimestamp()
                     };
+
+                    // Try to get FCM token again if missing
+                    if (!userData.fcmToken && window.firebaseMessaging) {
+                         try {
+                                const token = await window.firebaseMessaging.getToken();
+                                if (token) {
+                                    userData.fcmToken = token;
+                                }
+                         } catch (e) {
+                             console.log("Could not retrieve FCM token on save", e);
+                         }
+                    }
 
                     // If new user, preserve creation timestamp
                     if (isNewUser) {
@@ -779,7 +791,13 @@
                                 </div>
 
                                 <button
-                                    onClick={onBackToHome}
+                                    onClick={() => {
+                                        if (!selectedClass) {
+                                            setMessage({ type: 'error', text: 'Please select your class before leaving.' });
+                                            return;
+                                        }
+                                        onBackToHome();
+                                    }}
                                     className="p-2 text-gray-600 hover:text-red-700 transition-colors rounded-lg hover:bg-gray-100"
                                 >
                                     <ArrowLeft className="w-6 h-6" />
@@ -868,14 +886,14 @@
                                         <div className="relative">
                                             <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                                             <input
-                                                type="text"
+                                                type="tel"
                                                 value={phone}
-                                                readOnly
-                                                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-gray-500 bg-gray-50 cursor-not-allowed"
-                                                placeholder="Phone number"
+                                                onChange={(e) => setPhone(e.target.value)}
+                                                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all"
+                                                placeholder="Enter your mobile number"
                                             />
                                         </div>
-                                        <p className="text-xs text-gray-500 mt-1">Phone number cannot be changed</p>
+                                        <p className="text-xs text-gray-500 mt-1">Update your contact number</p>
                                     </div>
 
                                     {/* Save Button */}
@@ -1695,7 +1713,7 @@
                                     <div className="bg-white rounded-2xl border border-gray-200 p-3 shadow-sm hover:shadow-lg transition-all duration-300 group text-center">
                                         <div className="relative w-24 h-24 mx-auto mb-3 rounded-full overflow-hidden border-2 border-red-100 group-hover:border-red-300 transition-colors">
                                             <img
-                                                src="img/team-1.png"
+                                                src="img/team-2.png"
                                                 alt="Anubhav Sir"
                                                 className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
                                                 loading="lazy"
@@ -1704,15 +1722,14 @@
                                         <div className="flex items-center justify-center gap-1 mb-1">
                                             <h4 className="font-bold text-gray-900 text-sm">Anubhab Sir</h4>
                                             <BadgeCheck className="w-4 h-4 text-blue-500 fill-blue-50" />
-                                        </div>
-                                        <p className="text-[10px] text-gray-500 font-medium">Mathematics Expert</p>
+                                        </div>                               
                                     </div>
 
                                     {/* Teacher 2 */}
                                     <div className="bg-white rounded-2xl border border-gray-200 p-3 shadow-sm hover:shadow-lg transition-all duration-300 group text-center">
                                         <div className="relative w-24 h-24 mx-auto mb-3 rounded-full overflow-hidden border-2 border-red-100 group-hover:border-red-300 transition-colors">
                                             <img
-                                                src="img/team-2.png"
+                                                src="img/team-1.png"
                                                 alt="Anupriya Ma'am"
                                                 className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
                                                 loading="lazy"
@@ -1721,8 +1738,7 @@
                                         <div className="flex items-center justify-center gap-1 mb-1">
                                             <h4 className="font-bold text-gray-900 text-sm">Anupriya Ma'am</h4>
                                             <BadgeCheck className="w-4 h-4 text-blue-500 fill-blue-50" />
-                                        </div>
-                                        <p className="text-[10px] text-gray-500 font-medium">Science Specialist</p>
+                                        </div>                                        
                                     </div>
                                 </div>
                             </div>
@@ -2597,32 +2613,32 @@
 
             const samplePapers = {
                 9: [
-                    { title: "CBSE Sample Paper 2025-26 - Mathematics", subject: "Mathematics", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassX_2025_26/MathsStandard-SQP.pdf" },
-                    { title: "CBSE Sample Paper 2025-26 - Science", subject: "Science", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassX_2025_26/Science-SQP.pdf" },
-                    { title: "CBSE Sample Paper 2025-26 - English", subject: "English", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassX_2025_26/EnglishComm-SQP.pdf" },
-                    { title: "CBSE Sample Paper 2025-26 - Social Science", subject: "Social Science", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassX_2025_26/SocialScience-SQP.pdf" },
-                    { title: "CBSE Sample Paper 2025-26 - Hindi A", subject: "Hindi", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassX_2025_26/HindiA-SQP.pdf" }
+                    { title: "CBSE Sample Paper 2025-26 - Mathematics", subject: "Mathematics", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassX_2024_25/MathsStandard-SQP.pdf" },
+                    { title: "CBSE Sample Paper 2025-26 - Science", subject: "Science", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassX_2024_25/Science-SQP.pdf" },
+                    { title: "CBSE Sample Paper 2025-26 - English", subject: "English", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassX_2024_25/EnglishComm-SQP.pdf" },
+                    { title: "CBSE Sample Paper 2025-26 - Social Science", subject: "Social Science", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassX_2024_25/SocialScience-SQP.pdf" },
+                    { title: "CBSE Sample Paper 2025-26 - Hindi A", subject: "Hindi", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassX_2024_25/HindiA-SQP.pdf" }
                 ],
                 10: [
-                    { title: "CBSE Sample Paper 2025-26 - Mathematics", subject: "Mathematics", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassX_2025_26/MathsStandard-SQP.pdf" },
-                    { title: "CBSE Sample Paper 2025-26 - Science", subject: "Science", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassX_2025_26/Science-SQP.pdf" },
-                    { title: "CBSE Sample Paper 2025-26 - English", subject: "English", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassX_2025_26/EnglishComm-SQP.pdf" },
-                    { title: "CBSE Sample Paper 2025-26 - Social Science", subject: "Social Science", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassX_2025_26/SocialScience-SQP.pdf" },
-                    { title: "CBSE Sample Paper 2025-26 - Hindi A", subject: "Hindi", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassX_2025_26/HindiA-SQP.pdf" }
+                    { title: "CBSE Sample Paper 2025-26 - Mathematics", subject: "Mathematics", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassX_2024_25/MathsStandard-SQP.pdf" },
+                    { title: "CBSE Sample Paper 2025-26 - Science", subject: "Science", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassX_2024_25/Science-SQP.pdf" },
+                    { title: "CBSE Sample Paper 2025-26 - English", subject: "English", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassX_2024_25/EnglishComm-SQP.pdf" },
+                    { title: "CBSE Sample Paper 2025-26 - Social Science", subject: "Social Science", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassX_2024_25/SocialScience-SQP.pdf" },
+                    { title: "CBSE Sample Paper 2025-26 - Hindi A", subject: "Hindi", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassX_2024_25/HindiA-SQP.pdf" }
                 ],
                 11: [
-                    { title: "CBSE Sample Paper 2025-26 - Mathematics", subject: "Mathematics", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2025_26/Maths-SQP.pdf" },
-                    { title: "CBSE Sample Paper 2025-26 - Physics", subject: "Physics", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2025_26/Physics-SQP.pdf" },
-                    { title: "CBSE Sample Paper 2025-26 - Chemistry", subject: "Chemistry", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2025_26/Chemistry-SQP.pdf" },
-                    { title: "CBSE Sample Paper 2025-26 - Biology", subject: "Biology", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2025_26/Biology-SQP.pdf" },
-                    { title: "CBSE Sample Paper 2025-26 - Hindi Core", subject: "Hindi", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2025_26/HindiCore-SQP.pdf" }
+                    { title: "CBSE Sample Paper 2025-26 - Mathematics", subject: "Mathematics", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2024_25/Maths-SQP.pdf" },
+                    { title: "CBSE Sample Paper 2025-26 - Physics", subject: "Physics", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2024_25/Physics-SQP.pdf" },
+                    { title: "CBSE Sample Paper 2025-26 - Chemistry", subject: "Chemistry", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2024_25/Chemistry-SQP.pdf" },
+                    { title: "CBSE Sample Paper 2025-26 - Biology", subject: "Biology", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2024_25/Biology-SQP.pdf" },
+                    { title: "CBSE Sample Paper 2025-26 - Hindi Core", subject: "Hindi", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2024_25/HindiCore-SQP.pdf" }
                 ],
                 12: [
-                    { title: "CBSE Sample Paper 2025-26 - Mathematics", subject: "Mathematics", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2025_26/Maths-SQP.pdf" },
-                    { title: "CBSE Sample Paper 2025-26 - Physics", subject: "Physics", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2025_26/Physics-SQP.pdf" },
-                    { title: "CBSE Sample Paper 2025-26 - Chemistry", subject: "Chemistry", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2025_26/Chemistry-SQP.pdf" },
-                    { title: "CBSE Sample Paper 2025-26 - Biology", subject: "Biology", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2025_26/Biology-SQP.pdf" },
-                    { title: "CBSE Sample Paper 2025-26 - Hindi Core", subject: "Hindi", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2025_26/HindiCore-SQP.pdf" }
+                    { title: "CBSE Sample Paper 2025-26 - Mathematics", subject: "Mathematics", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2024_25/Maths-SQP.pdf" },
+                    { title: "CBSE Sample Paper 2025-26 - Physics", subject: "Physics", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2024_25/Physics-SQP.pdf" },
+                    { title: "CBSE Sample Paper 2025-26 - Chemistry", subject: "Chemistry", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2024_25/Chemistry-SQP.pdf" },
+                    { title: "CBSE Sample Paper 2025-26 - Biology", subject: "Biology", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2024_25/Biology-SQP.pdf" },
+                    { title: "CBSE Sample Paper 2025-26 - Hindi Core", subject: "Hindi", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2024_25/HindiCore-SQP.pdf" }
                 ]
             };
 
@@ -2786,7 +2802,7 @@
                     { title: "Science PYQ 2024", subject: "Science", year: "2024", pdfUrl: "https://ncert.nic.in/textbook/pdf/iesc1ps.pdf" },
                     { title: "Mathematics PYQ 2023", subject: "Mathematics", year: "2023", pdfUrl: "https://ncert.nic.in/textbook/pdf/iemh1ps.pdf" },
                     { title: "Science PYQ 2023", subject: "Science", year: "2023", pdfUrl: "https://ncert.nic.in/textbook/pdf/iesc1ps.pdf" },
-                    { title: "Hindi PYQ 2023", subject: "Hindi", year: "2023", pdfUrl: "https://ncert.nic.in/textbook/pdf/ieks1ps.pdf" }
+                    { title: "Hindi PYQ 2023", subject: "Hindi", year: "2023", pdfUrl: "https://ncert.nic.in/textbook/pdf/ihks1ps.pdf" }
                 ],
                 10: [
                     { title: "Mathematics Standard PYQ 2024", subject: "Mathematics", year: "2024", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassX_2024_25/MathsStandard-SQP.pdf" },
@@ -2802,7 +2818,7 @@
                     { title: "Physics PYQ 2024", subject: "Physics", year: "2024", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2024_25/Physics-SQP.pdf" },
                     { title: "Chemistry PYQ 2024", subject: "Chemistry", year: "2024", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2024_25/Chemistry-SQP.pdf" },
                     { title: "Biology PYQ 2024", subject: "Biology", year: "2024", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2024_25/Biology-SQP.pdf" },
-                    { title: "Hindi Core PYQ 2024", subject: "Hindi", year: "2024", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2024_25/HindiCore-SQP.pdf" }
+                    { title: "Hindi Core PYQ 2024", subject: "Hindi", year: "2024", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2024_25/HindiCore-SQP.pdf" },
                 ],
                 12: [
                     { title: "Mathematics PYQ 2024", subject: "Mathematics", year: "2024", pdfUrl: "https://cbseacademic.nic.in/web_material/SQP/ClassXII_2024_25/Maths-SQP.pdf" },
