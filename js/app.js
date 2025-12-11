@@ -656,6 +656,13 @@
                     return;
                 }
 
+                // Phone validation
+                const phoneRegex = /^\d+$/;
+                if (phone && (!phoneRegex.test(phone) || phone.length !== 10)) {
+                    setMessage({ type: 'error', text: 'Phone number must be exactly 10 digits and contain only numbers.' });
+                    return;
+                }
+
                 // Check if class is selected (mandatory)
                 if (!selectedClass) {
                     setMessage({ type: 'error', text: 'Please select your class' });
@@ -890,9 +897,17 @@
                                             <input
                                                 type="tel"
                                                 value={phone}
-                                                onChange={(e) => setPhone(e.target.value)}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    // Only allow numbers
+                                                    if (/^\d*$/.test(val) && val.length <= 10) {
+                                                        setPhone(val);
+                                                    }
+                                                }}
                                                 className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all"
-                                                placeholder="Enter your mobile number"
+                                                placeholder="Enter 10-digit mobile number"
+                                                maxLength={10}
+                                                inputMode="numeric"
                                             />
                                         </div>
                                         <p className="text-xs text-gray-500 mt-1">Update your contact number</p>
@@ -977,15 +992,34 @@
 
             // Handle notification permission request
             const handleRequestNotificationPermission = async () => {
+                const btn = document.getElementById('enable-notif-btn');
+                if (btn) btn.innerText = "Processing...";
+
                 const auth = window.firebaseAuth;
                 const userId = auth?.currentUser?.uid || localStorage.getItem('userId');
 
                 if (userId) {
-                    const granted = await initializePushNotifications(userId, true);
-                    if (granted) {
-                        setNotificationPermission('granted');
-                        setShowNotificationBanner(false);
+                    try {
+                        const granted = await initializePushNotifications(userId, true);
+                        if (granted) {
+                            setNotificationPermission('granted');
+                            setShowNotificationBanner(false);
+                            alert("Notifications successfully enabled!");
+                        } else {
+                            if (btn) btn.innerText = "Enable Now";
+                            if (Notification.permission === 'denied') {
+                                alert("Notification permission was denied. Please reset permissions in your browser settings.");
+                            } else {
+                                alert("Could not enable notifications. Please try again.");
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Handler error:", e);
+                        if (btn) btn.innerText = "Retry";
                     }
+                } else {
+                    alert("Please log in to enable notifications.");
+                    if (btn) btn.innerText = "Enable Now";
                 }
             };
 
@@ -1407,6 +1441,7 @@
                                             </p>
                                             <div className="flex gap-2">
                                                 <button
+                                                    id="enable-notif-btn"
                                                     onClick={handleRequestNotificationPermission}
                                                     className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white text-sm font-semibold rounded-xl hover:from-red-700 hover:to-red-800 transition-all duration-300 shadow-md hover:shadow-lg">
                                                     Enable Now
