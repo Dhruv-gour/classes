@@ -1,11 +1,12 @@
 {
   "name": "Chaturvedi Classes",
   "short_name": "Chaturvedi Classes",
-  "start_url": "./index.html",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
   "background_color": "#f9fafb",
   "theme_color": "#b91c1c",
   "orientation": "portrait-primary",
-  "offline_enabled": true,
   "icons": [
     {
       "src": "img/logo.png",
@@ -19,4 +20,3 @@
     }
   ]
 }
-
