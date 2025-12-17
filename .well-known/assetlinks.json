@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.dhruv.chaturvediclasses",
+      "sha256_cert_fingerprints": [
+        "41:F9:5B:40:2B:6E:AA:23:20:CA:9E:78:DE:B8:22:FA:F6:FF:12:94:D1:D4:29:38:56:3A:A2:59:37:7B:06:2C"
+      ]
+    }
+  }
+]
