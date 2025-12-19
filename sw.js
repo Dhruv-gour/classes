@@ -1,23 +1,48 @@
 // Service Worker for offline support
-const CACHE_NAME = 'chaturvedi-classes-v2';
+const CACHE_NAME = 'chaturvedi-classes-v3';
+const RUNTIME_CACHE = 'chaturvedi-runtime-v3';
 const OFFLINE_URL = './offline.html';
 
-// Install event - cache offline.html immediately
+// Resources to cache on install (static assets)
+const STATIC_CACHE_URLS = [
+    '/',
+    '/index.html',
+    '/offline.html',
+    '/manifest.json',
+    '/img/logo.png',
+    '/js/config.js',
+    '/js/utils.js'
+];
+
+// Install event - cache static resources
 self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => {
-            // Fetch and cache offline.html
-            return fetch(OFFLINE_URL)
-                .then((response) => {
-                    if (response.ok) {
-                        return cache.put(OFFLINE_URL, response);
-                    }
-                    throw new Error('Failed to fetch offline.html');
-                })
-                .catch((error) => {
-                    console.log('Failed to fetch offline.html, creating fallback:', error);
-                    // Create offline.html content inline
-                    const offlineHTML = `<!DOCTYPE html>
+        Promise.all([
+            caches.open(CACHE_NAME).then((cache) => {
+                // Cache static assets
+                return Promise.all(
+                    STATIC_CACHE_URLS.map(url => {
+                        return fetch(url).then(response => {
+                            if (response.ok) {
+                                return cache.put(url, response);
+                            }
+                        }).catch(() => {
+                            // Silently fail for non-critical resources
+                        });
+                    })
+                ).then(() => {
+                    // Always ensure offline.html is cached
+                    return fetch(OFFLINE_URL)
+                        .then((response) => {
+                            if (response.ok) {
+                                return cache.put(OFFLINE_URL, response);
+                            }
+                            throw new Error('Failed to fetch offline.html');
+                        })
+                        .catch((error) => {
+                            console.log('Failed to fetch offline.html, creating fallback:', error);
+                            // Create offline.html content inline
+                            const offlineHTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -75,14 +100,18 @@ self.addEventListener('install', (event) => {
     </script>
 </body>
 </html>`;
-                    return cache.put(OFFLINE_URL, new Response(offlineHTML, {
-                        headers: { 'Content-Type': 'text/html' }
-                    }));
+                            return cache.put(OFFLINE_URL, new Response(offlineHTML, {
+                                headers: { 'Content-Type': 'text/html' }
+                            }));
+                        });
                 });
+            }),
+            caches.open(RUNTIME_CACHE)
+        ]).then(() => {
+            // Force the waiting service worker to become the active service worker immediately
+            self.skipWaiting();
         })
     );
-    // Force the waiting service worker to become the active service worker immediately
-    self.skipWaiting();
 });
 
 // Activate event - clean up old caches
@@ -91,7 +120,8 @@ self.addEventListener('activate', (event) => {
         caches.keys().then((cacheNames) => {
             return Promise.all(
                 cacheNames.map((cacheName) => {
-                    if (cacheName !== CACHE_NAME) {
+                    // Delete old cache versions
+                    if (cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE) {
                         return caches.delete(cacheName);
                     }
                 })
@@ -110,16 +140,28 @@ self.addEventListener('message', (event) => {
     }
 });
 
-// Fetch event - intercept network requests
+// Fetch event - intercept network requests with optimized caching strategies
 self.addEventListener('fetch', (event) => {
     const request = event.request;
     const url = new URL(request.url, self.location.origin);
     
-    // Handle navigation requests (page loads) - this is critical for mobile
+    // Skip non-GET requests
+    if (request.method !== 'GET') {
+        return;
+    }
+    
+    // Skip cross-origin requests (only handle same-origin)
+    if (url.origin !== self.location.origin) {
+        // For external resources, use network first strategy
+        event.respondWith(fetch(request).catch(() => new Response('Offline', { status: 503 })));
+        return;
+    }
+    
+    // Handle navigation requests (page loads)
     if (request.mode === 'navigate' || (request.method === 'GET' && request.headers.get('accept') && request.headers.get('accept').includes('text/html'))) {
         // Create timeout for fetch (for mobile browsers)
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
         
         event.respondWith(
             fetch(request, { 
@@ -128,64 +170,97 @@ self.addEventListener('fetch', (event) => {
             })
                 .then((response) => {
                     clearTimeout(timeoutId);
-                    // If we get a valid response, return it
-                    if (response && response.status === 200) {
-                        return response;
-                    }
-                    // If response is not OK, try cache
-                    throw new Error('Response not OK');
-                })
-                .catch((error) => {
-                    clearTimeout(timeoutId);
-                    // Network failed or timeout - serve offline.html
-                    console.log('Network failed, serving offline page:', error);
-                    
-                    // Check if we're already on offline.html
-                    const isOfflinePage = url.pathname.endsWith('offline.html') || url.pathname.endsWith('/offline.html');
-                    
-                    if (isOfflinePage) {
-                        // If offline.html itself fails, return from cache
-                        return caches.match(OFFLINE_URL).then((cachedResponse) => {
-                            return cachedResponse || new Response('Offline', { status: 200, headers: { 'Content-Type': 'text/html' } });
-                        });
-                    } else {
-                        // For any other page when offline, redirect to offline.html
-                        return caches.match(OFFLINE_URL).then((cachedResponse) => {
-                            if (cachedResponse) {
-                                return cachedResponse;
-                            }
-                            // If offline.html not in cache, create a basic one
-                            return new Response(
-                                '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Offline</title><style>body{font-family:Arial;text-align:center;padding:50px;background:#f9fafb;color:#111827}h1{color:#b91c1c}</style></head><body><h1>No Internet Connection</h1><p>Please check your internet connection and try again.</p><button onclick="location.reload()">Retry</button></body></html>',
-                                { 
-                                    status: 200,
-                                    headers: { 'Content-Type': 'text/html' } 
-                                }
-                            );
-                        });
-                    }
-                })
-        );
-    } else {
-        // For non-navigation requests (images, scripts, etc.), try network first, then cache
-        event.respondWith(
-            fetch(request)
                 .then((response) => {
-                    // Only cache successful responses
+                    // Cache successful HTML responses for offline use
                     if (response && response.status === 200) {
                         const responseToCache = response.clone();
-                        caches.open(CACHE_NAME).then((cache) => {
+                        caches.open(RUNTIME_CACHE).then((cache) => {
                             cache.put(request, responseToCache);
                         });
                     }
                     return response;
                 })
-                .catch(() => {
-                    // Try to get from cache
+                .catch((error) => {
+                    clearTimeout(timeoutId);
+                    // Network failed - try cache first, then offline page
                     return caches.match(request).then((cachedResponse) => {
-                        return cachedResponse || new Response('Not available offline', { status: 503 });
+                        if (cachedResponse) {
+                            return cachedResponse;
+                        }
+                        // Check if we're already on offline.html
+                        const isOfflinePage = url.pathname.endsWith('offline.html') || url.pathname.endsWith('/offline.html');
+                        if (isOfflinePage) {
+                            return caches.match(OFFLINE_URL).then((cachedResponse) => {
+                                return cachedResponse || new Response('Offline', { status: 200, headers: { 'Content-Type': 'text/html' } });
+                            });
+                        }
+                        // For any other page when offline, serve offline.html
+                        return caches.match(OFFLINE_URL).then((cachedResponse) => {
+                            return cachedResponse || new Response(
+                                '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Offline</title><style>body{font-family:Arial;text-align:center;padding:50px;background:#f9fafb;color:#111827}h1{color:#b91c1c}</style></head><body><h1>No Internet Connection</h1><p>Please check your internet connection and try again.</p><button onclick="location.reload()">Retry</button></body></html>',
+                                { status: 200, headers: { 'Content-Type': 'text/html' } }
+                            );
+                        });
                     });
                 })
+        );
+    } 
+    // Handle images - Cache First strategy (images change infrequently)
+    else if (request.destination === 'image') {
+        event.respondWith(
+            caches.match(request).then((cachedResponse) => {
+                if (cachedResponse) {
+                    return cachedResponse;
+                }
+                return fetch(request).then((response) => {
+                    if (response && response.status === 200) {
+                        const responseToCache = response.clone();
+                        caches.open(RUNTIME_CACHE).then((cache) => {
+                            cache.put(request, responseToCache);
+                        });
+                    }
+                    return response;
+                }).catch(() => {
+                    // Return placeholder if image not available
+                    return new Response('Image unavailable offline', { status: 503 });
+                });
+            })
+        );
+    }
+    // Handle JS/CSS - Network First, then Cache
+    else if (request.destination === 'script' || request.destination === 'style') {
+        event.respondWith(
+            fetch(request).then((response) => {
+                if (response && response.status === 200) {
+                    const responseToCache = response.clone();
+                    caches.open(RUNTIME_CACHE).then((cache) => {
+                        cache.put(request, responseToCache);
+                    });
+                }
+                return response;
+            }).catch(() => {
+                return caches.match(request).then((cachedResponse) => {
+                    return cachedResponse || new Response('Resource unavailable offline', { status: 503 });
+                });
+            })
+        );
+    }
+    // Handle other static resources - Network First
+    else {
+        event.respondWith(
+            fetch(request).then((response) => {
+                if (response && response.status === 200) {
+                    const responseToCache = response.clone();
+                    caches.open(RUNTIME_CACHE).then((cache) => {
+                        cache.put(request, responseToCache);
+                    });
+                }
+                return response;
+            }).catch(() => {
+                return caches.match(request).then((cachedResponse) => {
+                    return cachedResponse || new Response('Resource unavailable offline', { status: 503 });
+                });
+            })
         );
     }
 });

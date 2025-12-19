@@ -197,6 +197,87 @@
             const [otpMessage, setOtpMessage] = useState({ type: '', text: '' });
             const [isSendingOtp, setIsSendingOtp] = useState(false);
 
+            // OTP State Persistence Keys
+            const OTP_STATE_KEY = 'otp_auth_state';
+            const OTP_EXPIRY_TIME = 15 * 60 * 1000; // 15 minutes in milliseconds
+
+            // Restore OTP state from localStorage on mount
+            useEffect(() => {
+                try {
+                    const savedState = localStorage.getItem(OTP_STATE_KEY);
+                    if (savedState) {
+                        const state = JSON.parse(savedState);
+                        const now = Date.now();
+                        const timeElapsed = now - state.timestamp;
+                        
+                        // Check if state is still valid (within expiry time)
+                        if (timeElapsed < OTP_EXPIRY_TIME && state.email && state.showOtpInput) {
+                            // Restore OTP flow state
+                            setOtpEmail(state.email);
+                            setShowOtpInput(true);
+                            setOtpMessage({ 
+                                type: 'success', 
+                                text: 'Please enter the OTP sent to your email' 
+                            });
+                            console.log('OTP state restored from persistence');
+                        } else {
+                            // State expired or invalid, clear it
+                            localStorage.removeItem(OTP_STATE_KEY);
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error restoring OTP state:', err);
+                    // Clear corrupted state
+                    localStorage.removeItem(OTP_STATE_KEY);
+                }
+            }, []);
+
+            // Persist OTP state on page unload/visibility change (for PWA/TWA)
+            useEffect(() => {
+                const handleBeforeUnload = () => {
+                    if (showOtpInput && otpEmail) {
+                        saveOtpState(otpEmail, showOtpInput);
+                    }
+                };
+
+                const handleVisibilityChange = () => {
+                    if (document.hidden && showOtpInput && otpEmail) {
+                        saveOtpState(otpEmail, showOtpInput);
+                    }
+                };
+
+                window.addEventListener('beforeunload', handleBeforeUnload);
+                document.addEventListener('visibilitychange', handleVisibilityChange);
+
+                return () => {
+                    window.removeEventListener('beforeunload', handleBeforeUnload);
+                    document.removeEventListener('visibilitychange', handleVisibilityChange);
+                };
+            }, [showOtpInput, otpEmail]);
+
+            // Save OTP state to localStorage
+            const saveOtpState = (email, showOtpInput) => {
+                try {
+                    const state = {
+                        email: email,
+                        showOtpInput: showOtpInput,
+                        timestamp: Date.now()
+                    };
+                    localStorage.setItem(OTP_STATE_KEY, JSON.stringify(state));
+                } catch (err) {
+                    console.error('Error saving OTP state:', err);
+                }
+            };
+
+            // Clear OTP state from localStorage
+            const clearOtpState = () => {
+                try {
+                    localStorage.removeItem(OTP_STATE_KEY);
+                } catch (err) {
+                    console.error('Error clearing OTP state:', err);
+                }
+            };
+
             const getFcmToken = async () => {
                 try {
                     if (window.firebaseMessaging) {
@@ -232,8 +313,12 @@
 
                     setOtpMessage({ type: 'success', text: 'OTP sent to your email' });
                     setShowOtpInput(true);
+                    // Persist OTP state
+                    saveOtpState(email, true);
                 } catch (err) {
                     setOtpMessage({ type: 'error', text: err.message });
+                    // Clear state on error
+                    clearOtpState();
                 } finally {
                     setIsSendingOtp(false);
                 }
@@ -261,6 +346,9 @@
 
                     const user = data.user;
                     if (user) {
+                        // Clear OTP state on successful verification
+                        clearOtpState();
+                        
                         // Process user data similar to Google login
                         const db = window.firebaseDb;
                         const displayName = user.user_metadata?.full_name || email.split('@')[0];
@@ -307,6 +395,7 @@
                 } catch (err) {
                     setOtpMessage({ type: 'error', text: err.message });
                     setIsLoading(false);
+                    // Note: Don't clear OTP state on verification error, user may want to retry
                 }
             };
 
@@ -464,10 +553,15 @@
 
                             {/* Error Message */}
                             {(error || otpMessage.text) && (
-                                <div className={`px-4 py-3 rounded-xl text-sm mb-6 border ${otpMessage.type === 'success'
-                                    ? 'bg-green-50 border-green-200 text-green-700'
-                                    : 'bg-red-50 border-red-200 text-red-700'
-                                    }`}>
+                                <div 
+                                    role="alert"
+                                    aria-live="polite"
+                                    aria-atomic="true"
+                                    className={`px-4 py-3 rounded-xl text-sm mb-6 border ${otpMessage.type === 'success'
+                                        ? 'bg-green-50 border-green-200 text-green-700'
+                                        : 'bg-red-50 border-red-200 text-red-700'
+                                        }`}
+                                >
                                     {error || otpMessage.text}
                                 </div>
                             )}
@@ -483,19 +577,29 @@
                                         <input
                                             type="email"
                                             id="emailInput"
+                                            name="email"
                                             placeholder="name@example.com"
                                             value={otpEmail}
                                             onChange={(e) => setOtpEmail(e.target.value)}
-                                            className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none transition-all duration-200 bg-gray-50 focus:bg-white text-gray-900 placeholder-gray-400"
+                                            className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none transition-all duration-200 bg-gray-50 focus:bg-white text-gray-900 placeholder-gray-400 disabled:opacity-60 disabled:cursor-not-allowed"
+                                            aria-label="Email address"
+                                            aria-required="true"
+                                            aria-invalid={error ? "true" : "false"}
+                                            aria-describedby={error ? "email-error" : undefined}
+                                            autoComplete="email"
+                                            disabled={showOtpInput}
                                         />
                                     </div>
                                 </div>
                                 {!showOtpInput && (
                                     <button
                                         id="sendOtpBtn"
+                                        type="button"
                                         onClick={handleSendOtp}
                                         disabled={isSendingOtp}
-                                        className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                                        className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        aria-label="Send OTP to email"
+                                        aria-busy={isSendingOtp}
                                     >
                                         {isSendingOtp ? (
                                             <>
@@ -513,7 +617,22 @@
 
                                 {showOtpInput && (
                                     <div className="pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                                        <label htmlFor="otpInput" className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 ml-1">One-Time Password</label>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <label htmlFor="otpInput" className="block text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">One-Time Password</label>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setShowOtpInput(false);
+                                                    setOtpCode('');
+                                                    setOtpMessage({ type: '', text: '' });
+                                                    clearOtpState();
+                                                }}
+                                                className="text-xs text-gray-500 hover:text-red-600 font-medium underline focus:outline-none focus:ring-2 focus:ring-red-200 rounded px-1"
+                                                aria-label="Change email address"
+                                            >
+                                                Change Email
+                                            </button>
+                                        </div>
                                         <div className="relative mb-4">
                                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                                 <svg className="h-5 w-5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
@@ -521,7 +640,10 @@
                                             <input
                                                 type="text"
                                                 id="otpInput"
+                                                name="otp"
                                                 inputMode="numeric"
+                                                pattern="[0-9]{6}"
+                                                maxLength="6"
                                                 placeholder="Enter 6-digit code"
                                                 value={otpCode}
                                                 onChange={(e) => {
@@ -531,13 +653,23 @@
                                                     }
                                                 }}
                                                 className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 outline-none transition-all duration-200 bg-gray-50 focus:bg-white text-gray-900 placeholder-gray-400 tracking-widest"
+                                                aria-label="One-time password"
+                                                aria-required="true"
+                                                aria-invalid={error ? "true" : "false"}
+                                                aria-describedby={error ? "otp-error" : "otp-help"}
+                                                autoComplete="one-time-code"
+                                                autoFocus={showOtpInput}
                                             />
+                                            <div id="otp-help" className="sr-only">Enter the 6-digit code sent to your email</div>
                                         </div>
                                         <button
                                             id="verifyOtpBtn"
+                                            type="button"
                                             onClick={handleVerifyOtp}
-                                            disabled={isLoading}
-                                            className="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold py-3 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                                            disabled={isLoading || !otpCode || otpCode.length !== 6}
+                                            className="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold py-3 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            aria-label="Verify OTP and login"
+                                            aria-busy={isLoading}
                                         >
                                             {isLoading ? (
                                                 <div className="w-5 h-5 border-2 border-green-400 border-t-transparent rounded-full animate-spin"></div>
@@ -1757,7 +1889,7 @@
                                             />
                                         </div>
                                         <div className="flex items-center justify-center gap-1 mb-1">
-                                            <h4 className="font-bold text-gray-900 text-sm">Anubhab Sir</h4>
+                                            <h4 className="font-bold text-gray-900 text-sm">Anubhav Sir</h4>
                                             <BadgeCheck className="w-4 h-4 text-blue-500 fill-blue-50" />
                                         </div>                               
                                     </div>
@@ -3504,15 +3636,17 @@
         const DISABLE_LOGIN_FOR_TESTING = false;
 
         function App() {
+            // Initialize view immediately - show login by default, auth check happens in background
             const [currentView, setCurrentView] = useState(DISABLE_LOGIN_FOR_TESTING ? 'home' : 'login'); // 'login', 'home', 'library', 'profile', 'quiz', 'ai', 'features', 'location', 'notifications', 'allclasses', 'pyq', 'mindmap'
             const [username, setUsername] = useState(DISABLE_LOGIN_FOR_TESTING ? 'Test User' : '');
-            const [isCheckingAuth, setIsCheckingAuth] = useState(!DISABLE_LOGIN_FOR_TESTING);
+            const [isCheckingAuth, setIsCheckingAuth] = useState(false); // No loading screen - check in background
+            const [isTransitioning, setIsTransitioning] = useState(false);
 
             // Handle mobile back button - navigate to home if not on home/login
             useEffect(() => {
                 const handleBackButton = () => {
                     if (currentView !== 'home' && currentView !== 'login') {
-                        setCurrentView('home');
+                        transitionToView('home');
                     }
                 };
 
@@ -3542,6 +3676,9 @@
 
                         // Unified Auth Handler
                         const handleAuthUser = async (user, type) => {
+                            // Clear OTP state when user is authenticated (successful login via any method)
+                            localStorage.removeItem('otp_auth_state');
+                            
                             // User is signed in - use cached data first (fast)
                             const cachedUsername = localStorage.getItem('username');
                             // Handle both Firebase (uid) and Supabase (id) user objects
@@ -3553,8 +3690,8 @@
 
                             // Update UI immediately with cached data
                             setUsername(displayName);
-                            setCurrentView('home');
                             setIsCheckingAuth(false);
+                            setCurrentView('home');
 
                             // Fetch fresh data from Firestore in background (non-blocking)
                             try {
@@ -3605,11 +3742,12 @@
                                 } else {
                                     // Really logged out
                                     setUsername('');
+                                    setIsCheckingAuth(false);
                                     setCurrentView('login');
                                     localStorage.removeItem('username');
                                     localStorage.removeItem('userEmail');
                                     localStorage.removeItem('userId');
-                                    setIsCheckingAuth(false);
+                                    // Don't clear OTP state here - user might be in middle of OTP flow
                                 }
                             }
                         });
@@ -3622,6 +3760,8 @@
                         if (savedUsername) {
                             setUsername(savedUsername);
                             setCurrentView('home');
+                        } else {
+                            setCurrentView('login');
                         }
                     }
                 };
@@ -3693,6 +3833,7 @@
             const handleLogin = (user, isNewUser = false) => {
                 setUsername(user);
                 localStorage.setItem('username', user);
+                transitionToView(isNewUser ? 'profile' : 'home');
 
                 // Request notification permissions for logged-in users
                 const auth = window.firebaseAuth;
@@ -3704,119 +3845,120 @@
                     });
                 }
 
-                // If new user, redirect to profile page
-                if (isNewUser) {
-                    setCurrentView('profile');
-                } else {
-                    setCurrentView('home');
-                }
+                // View transition is already handled in transitionToView call above
             };
 
             const handleLogout = async () => {
                 try {
                     await firebase.auth().signOut();
                     await window.supabaseClient.auth.signOut();
-
-                    setUsername('');
-                    setCurrentView('login');
-                    localStorage.removeItem('username');
-                    localStorage.removeItem('userEmail');
-                    localStorage.removeItem('userId');
                 } catch (error) {
                     console.error("Error signing out:", error);
-                    // Still logout locally even if signout fails
+                } finally {
+                    // Always logout locally even if signout fails
                     setUsername('');
-                    setCurrentView('login');
                     localStorage.removeItem('username');
                     localStorage.removeItem('userEmail');
                     localStorage.removeItem('userId');
+                    // Clear OTP state on logout
+                    localStorage.removeItem('otp_auth_state');
+                    transitionToView('login');
                 }
             };
 
             const handleNavigateToLibrary = () => {
-                setCurrentView('library');
+                transitionToView('library');
             };
 
             const handleBackToHome = () => {
-                setCurrentView('home');
+                transitionToView('home');
             };
 
             const handleNavigateToProfile = () => {
-                setCurrentView('profile');
+                transitionToView('profile');
             };
 
             const handleNavigateToQuiz = () => {
-                setCurrentView('quiz');
+                transitionToView('quiz');
             };
 
             const handleNavigateToAI = () => {
-                setCurrentView('ai');
+                transitionToView('ai');
             };
 
             const handleNavigateToFeatures = () => {
-                setCurrentView('features');
+                transitionToView('features');
             };
 
             const handleNavigateToLocation = () => {
-                setCurrentView('location');
+                transitionToView('location');
             };
 
             const handleNavigateToNotifications = () => {
-                setCurrentView('notifications');
+                transitionToView('notifications');
             };
 
             const handleNavigateToAllClasses = () => {
-                setCurrentView('allclasses');
+                transitionToView('allclasses');
             };
 
             const handleNavigateToPYQ = () => {
-                setCurrentView('pyq');
+                transitionToView('pyq');
             };
 
             const handleNavigateToMindMap = () => {
-                setCurrentView('mindmap');
+                transitionToView('mindmap');
             };
 
-            // Show loading while checking authentication
-            if (isCheckingAuth) {
-                return (
-                    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                        <div className="text-center">
-                            <div className="w-12 h-12 border-4 border-red-700 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                            <p className="text-gray-600">Loading...</p>
-                        </div>
-                    </div>
-                );
-            }
+            // Wrapper function for smooth view transitions
+            const transitionToView = (newView) => {
+                if (currentView === newView) return; // Avoid unnecessary transitions
+                setIsTransitioning(true);
+                setTimeout(() => {
+                    setCurrentView(newView);
+                    // Reset transition state after animation completes
+                    setTimeout(() => setIsTransitioning(false), 50);
+                }, 150);
+            };
 
-            // Render based on current view
-            if (currentView === 'login') {
-                return <LoginPage onLogin={handleLogin} />;
-            } else if (currentView === 'home') {
-                return <HomePage onNavigateToLibrary={handleNavigateToLibrary} username={username} onLogout={handleLogout} onNavigateToProfile={handleNavigateToProfile} onNavigateToQuiz={handleNavigateToQuiz} onNavigateToAI={handleNavigateToAI} onNavigateToFeatures={handleNavigateToFeatures} onNavigateToLocation={handleNavigateToLocation} onNavigateToNotifications={handleNavigateToNotifications} onNavigateToAllClasses={handleNavigateToAllClasses} onNavigateToPYQ={handleNavigateToPYQ} onNavigateToMindMap={handleNavigateToMindMap} />;
-            } else if (currentView === 'library') {
-                return <NCERTLibrary onBackToHome={handleBackToHome} />;
-            } else if (currentView === 'profile') {
-                return <ProfileEditPage onBackToHome={handleBackToHome} username={username} onUsernameUpdate={setUsername} />;
-            } else if (currentView === 'quiz') {
-                return <DailyQuiz onBackToHome={handleBackToHome} username={username} />;
-            } else if (currentView === 'ai') {
-                return <AIChat onBackToHome={handleBackToHome} />;
-            } else if (currentView === 'features') {
-                return <AllFeatures onBackToHome={handleBackToHome} onNavigateToLibrary={handleNavigateToLibrary} onNavigateToAllClasses={handleNavigateToAllClasses} onNavigateToPYQ={handleNavigateToPYQ} onNavigateToMindMap={handleNavigateToMindMap} />;
-            } else if (currentView === 'location') {
-                return <LocationScreen onBackToHome={handleBackToHome} />;
-            } else if (currentView === 'notifications') {
-                return <NotificationsScreen onBackToHome={handleBackToHome} />;
-            } else if (currentView === 'allclasses') {
-                return <AllClassesScreen onBackToHome={handleBackToHome} />;
-            } else if (currentView === 'pyq') {
-                return <PYQScreen onBackToHome={handleBackToHome} />;
-            } else if (currentView === 'mindmap') {
-                return <AIStudyMindMap onBackToHome={handleBackToHome} />;
-            }
+            // Render based on current view with smooth transitions
+            const renderView = () => {
+                if (currentView === 'login') {
+                    return <LoginPage onLogin={handleLogin} />;
+                } else if (currentView === 'home') {
+                    return <HomePage onNavigateToLibrary={handleNavigateToLibrary} username={username} onLogout={handleLogout} onNavigateToProfile={handleNavigateToProfile} onNavigateToQuiz={handleNavigateToQuiz} onNavigateToAI={handleNavigateToAI} onNavigateToFeatures={handleNavigateToFeatures} onNavigateToLocation={handleNavigateToLocation} onNavigateToNotifications={handleNavigateToNotifications} onNavigateToAllClasses={handleNavigateToAllClasses} onNavigateToPYQ={handleNavigateToPYQ} onNavigateToMindMap={handleNavigateToMindMap} />;
+                } else if (currentView === 'library') {
+                    return <NCERTLibrary onBackToHome={handleBackToHome} />;
+                } else if (currentView === 'profile') {
+                    return <ProfileEditPage onBackToHome={handleBackToHome} username={username} onUsernameUpdate={setUsername} />;
+                } else if (currentView === 'quiz') {
+                    return <DailyQuiz onBackToHome={handleBackToHome} username={username} />;
+                } else if (currentView === 'ai') {
+                    return <AIChat onBackToHome={handleBackToHome} />;
+                } else if (currentView === 'features') {
+                    return <AllFeatures onBackToHome={handleBackToHome} onNavigateToLibrary={handleNavigateToLibrary} onNavigateToAllClasses={handleNavigateToAllClasses} onNavigateToPYQ={handleNavigateToPYQ} onNavigateToMindMap={handleNavigateToMindMap} />;
+                } else if (currentView === 'location') {
+                    return <LocationScreen onBackToHome={handleBackToHome} />;
+                } else if (currentView === 'notifications') {
+                    return <NotificationsScreen onBackToHome={handleBackToHome} />;
+                } else if (currentView === 'allclasses') {
+                    return <AllClassesScreen onBackToHome={handleBackToHome} />;
+                } else if (currentView === 'pyq') {
+                    return <PYQScreen onBackToHome={handleBackToHome} />;
+                } else if (currentView === 'mindmap') {
+                    return <AIStudyMindMap onBackToHome={handleBackToHome} />;
+                }
+                return null;
+            };
 
-            return null;
+            return (
+                <div 
+                    key={currentView}
+                    className={`view-transition ${isTransitioning ? 'fade-out' : 'fade-in'}`}
+                >
+                    {renderView()}
+                </div>
+            );
         }
 
         // Standard React initialization block

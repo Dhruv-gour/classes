@@ -3,19 +3,37 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
     <meta name="screen-orientation" content="portrait">
     <meta name="orientation" content="portrait">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>Chaturvedi Classes</title>
+    <meta name="theme-color" content="#b91c1c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Chaturvedi Classes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    
+    <!-- SEO Meta Tags -->
+    <title>Chaturvedi Classes - Learning Platform for 9th to 12th Students</title>
+    <meta name="description" content="Chaturvedi Classes - Excellence in Education. Learning platform for 9th to 12th students with comprehensive study materials, NCERT books, quizzes, and AI-powered features.">
+    <meta name="keywords" content="Chaturvedi Classes, education, learning platform, NCERT, 9th class, 10th class, 11th class, 12th class, online classes, study materials">
+    <meta name="author" content="Chaturvedi Classes">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <link rel="canonical" href="https://chaturvediclasses.com/">
+    
 
     <!-- Resource Hints for Performance -->
-    <link rel="preconnect" href="https://unpkg.com">
-    <link rel="preconnect" href="https://cdn.tailwindcss.com">
-    <link rel="preconnect" href="https://www.gstatic.com">
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
+    <link rel="dns-prefetch" href="https://unpkg.com">
+    <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://www.gstatic.com">
     <link rel="manifest" href="manifest.json">
     <!-- Preload LCP Image -->
-    <link rel="preload" href="img/logo.png" as="image">
+    <link rel="preload" href="img/logo.png" as="image" fetchpriority="high">
+    <link rel="icon" type="image/png" sizes="192x192" href="img/logo.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="img/logo.png">
 
     <!-- Load necessary libraries - Deferred to improve LCP -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" defer></script>
@@ -26,8 +44,42 @@
     <!-- Tailwind CSS - Left blocking to prevent FOUC, but preconnected -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        if (typeof navigator.serviceWorker !== 'undefined') {
-            navigator.serviceWorker.register('sw.js')
+        // Optimized Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('sw.js', { scope: '/' })
+                    .then(function(registration) {
+                        console.log('Service Worker registered successfully:', registration.scope);
+                        
+                        // Check for updates
+                        registration.addEventListener('updatefound', function() {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', function() {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New service worker available, notify user or reload
+                                    console.log('New service worker available');
+                                    // Optional: Show notification to user or auto-reload
+                                    if (confirm('A new version is available. Reload to update?')) {
+                                        newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch(function(error) {
+                        console.log('Service Worker registration failed:', error);
+                    });
+                
+                // Handle service worker updates
+                let refreshing = false;
+                navigator.serviceWorker.addEventListener('controllerchange', function() {
+                    if (!refreshing) {
+                        refreshing = true;
+                        window.location.reload();
+                    }
+                });
+            });
         }
     </script>
 
@@ -68,11 +120,66 @@
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
+
+        /* Smooth screen transition animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+        }
+
+        .view-transition {
+            width: 100%;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        .view-transition.fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        .view-transition.fade-out {
+            animation: fadeOut 0.15s ease-out forwards;
+        }
+
+        /* Smooth transitions for all interactive elements */
+        button, a, input, select, textarea {
+            transition: all 0.2s ease;
+        }
+
+        /* Reduce motion for users who prefer it */
+        @media (prefers-reduced-motion: reduce) {
+            .view-transition,
+            .view-transition.fade-in,
+            .view-transition.fade-out {
+                animation: none;
+            }
+            
+            button, a, input, select, textarea {
+                transition: none;
+            }
+        }
     </style>
 </head>
 
 <body class="bg-gray-50 text-gray-900 select-none" oncontextmenu="return false;">
-    <div id="root">
+    <div id="root" role="main" aria-label="Chaturvedi Classes Application">
         <!-- Static Loading State to improve LCP -->
         <div
             class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-red-50 to-yellow-50 px-4 py-8">
@@ -81,7 +188,7 @@
                 <div class="flex justify-center mb-8">
                     <div
                         class="w-24 h-24 flex items-center justify-center overflow-hidden bg-white rounded-full shadow-lg p-1">
-                        <img src="img/logo.png" alt="Chaturvedi Classes Logo" class="w-full h-full object-contain" />
+                        <img src="img/logo.png" alt="Chaturvedi Classes Logo" class="w-full h-full object-contain" width="96" height="96" loading="eager" fetchpriority="high" />
                     </div>
                 </div>
                 <h1 class="text-3xl md:text-4xl font-bold text-red-900 mb-2">
