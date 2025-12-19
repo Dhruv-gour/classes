@@ -18,5 +18,12 @@
       "sizes": "512x512",
       "type": "image/png"
     }
+  ],
+  "id": "com.dhruv.chaturvediclasses",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": [
+    "books",
+    "education"
   ]
 }
