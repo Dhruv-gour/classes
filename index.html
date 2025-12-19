@@ -25,6 +25,11 @@
 
     <!-- Tailwind CSS - Left blocking to prevent FOUC, but preconnected -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        if (typeof navigator.serviceWorker !== 'undefined') {
+            navigator.serviceWorker.register('sw.js')
+        }
+    </script>
 
     <!-- Firebase SDK - Deferred -->
     <script src="https://www.gstatic.com/firebasejs/12.6.0/firebase-app-compat.js" defer></script>
