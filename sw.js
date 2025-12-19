@@ -170,7 +170,6 @@ self.addEventListener('fetch', (event) => {
             })
                 .then((response) => {
                     clearTimeout(timeoutId);
-                .then((response) => {
                     // Cache successful HTML responses for offline use
                     if (response && response.status === 200) {
                         const responseToCache = response.clone();

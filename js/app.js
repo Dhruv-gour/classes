@@ -1339,8 +1339,9 @@
 
                         {/* Drawer */}
                         <div
-                            className={`absolute right-0 top-0 h-full w-80 max-w-[85vw] bg-white shadow-2xl transform transition-transform duration-300 ease-out ${isNavOpen ? 'translate-x-0' : 'translate-x-full'}`}
+                            className={`absolute right-0 top-0 h-full w-[280px] max-w-[85vw] bg-white shadow-2xl transform transition-transform duration-200 ease-out ${isNavOpen ? 'translate-x-0' : 'translate-x-full'}`}
                             onClick={(e) => e.stopPropagation()}
+                            style={{ maxHeight: '100vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}
                         >
                             <div className="flex flex-col h-full">
                                 {/* Drawer Header */}
@@ -3640,7 +3641,6 @@
             const [currentView, setCurrentView] = useState(DISABLE_LOGIN_FOR_TESTING ? 'home' : 'login'); // 'login', 'home', 'library', 'profile', 'quiz', 'ai', 'features', 'location', 'notifications', 'allclasses', 'pyq', 'mindmap'
             const [username, setUsername] = useState(DISABLE_LOGIN_FOR_TESTING ? 'Test User' : '');
             const [isCheckingAuth, setIsCheckingAuth] = useState(false); // No loading screen - check in background
-            const [isTransitioning, setIsTransitioning] = useState(false);
 
             // Handle mobile back button - navigate to home if not on home/login
             useEffect(() => {
@@ -3910,15 +3910,10 @@
                 transitionToView('mindmap');
             };
 
-            // Wrapper function for smooth view transitions
+            // Wrapper function for smooth view transitions - simplified
             const transitionToView = (newView) => {
                 if (currentView === newView) return; // Avoid unnecessary transitions
-                setIsTransitioning(true);
-                setTimeout(() => {
-                    setCurrentView(newView);
-                    // Reset transition state after animation completes
-                    setTimeout(() => setIsTransitioning(false), 50);
-                }, 150);
+                setCurrentView(newView);
             };
 
             // Render based on current view with smooth transitions
@@ -3952,10 +3947,7 @@
             };
 
             return (
-                <div 
-                    key={currentView}
-                    className={`view-transition ${isTransitioning ? 'fade-out' : 'fade-in'}`}
-                >
+                <div key={currentView} className="view-transition">
                     {renderView()}
                 </div>
             );
