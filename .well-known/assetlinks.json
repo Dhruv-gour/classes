@@ -1,13 +1,8 @@
-[
-  {
-    "relation": ["delegate_permission/common.handle_all_urls"],
-    "target": {
-      "namespace": "android_app",
-      "package_name": "app.dhruv.chaturvediclasses",
-      "sha256_cert_fingerprints": [
-        "73:26:C6:63:98:99:1C:5B:80:0E:78:B1:70:3A:46:28:33:B7:97:AA:1E:EF:71:2E:30:72:85:09:0A:93:F8:6C"
-      ]
-    }
-  }
-]
-
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.dhruv.chaturvediclasses",
+        "sha256_cert_fingerprints": ["99:94:40:67:49:05:16:17:D3:BC:70:11:93:9F:01:7B:78:78:FA:67:77:B6:72:5E:7B:96:1A:24:36:4F:AE:76"]
+      }
+    }]
