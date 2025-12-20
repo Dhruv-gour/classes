@@ -1092,6 +1092,8 @@
             const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
             const [touchStart, setTouchStart] = useState(null);
             const [touchEnd, setTouchEnd] = useState(null);
+            const [swipeStartX, setSwipeStartX] = useState(null);
+            const [swipeStartY, setSwipeStartY] = useState(null);
             const [helpPhoneNumber, setHelpPhoneNumber] = useState(localStorage.getItem('helpPhoneNumber') || '+1234567890');
             const [notificationPermission, setNotificationPermission] = useState(checkNotificationPermission());
             const [showNotificationBanner, setShowNotificationBanner] = useState(false);
@@ -1323,10 +1325,52 @@
                 document.getElementById('profile-picture-input').click();
             };
 
+            // Swipe gesture to open drawer
+            useEffect(() => {
+                const handleTouchStart = (e) => {
+                    setSwipeStartX(e.touches[0].clientX);
+                    setSwipeStartY(e.touches[0].clientY);
+                };
+
+                const handleTouchMove = (e) => {
+                    if (swipeStartX === null || swipeStartY === null) return;
+                    
+                    const currentX = e.touches[0].clientX;
+                    const currentY = e.touches[0].clientY;
+                    const diffX = currentX - swipeStartX;
+                    const diffY = currentY - swipeStartY;
+                    
+                    // Only trigger if horizontal swipe is greater than vertical (to avoid conflicts with scrolling)
+                    if (Math.abs(diffX) > Math.abs(diffY) && diffX > 50 && !isNavOpen) {
+                        setIsNavOpen(true);
+                        setSwipeStartX(null);
+                        setSwipeStartY(null);
+                    }
+                };
+
+                const handleTouchEnd = () => {
+                    setSwipeStartX(null);
+                    setSwipeStartY(null);
+                };
+
+                const mainContent = document.querySelector('.home-main-content');
+                if (mainContent) {
+                    mainContent.addEventListener('touchstart', handleTouchStart, { passive: true });
+                    mainContent.addEventListener('touchmove', handleTouchMove, { passive: true });
+                    mainContent.addEventListener('touchend', handleTouchEnd, { passive: true });
+                    
+                    return () => {
+                        mainContent.removeEventListener('touchstart', handleTouchStart);
+                        mainContent.removeEventListener('touchmove', handleTouchMove);
+                        mainContent.removeEventListener('touchend', handleTouchEnd);
+                    };
+                }
+            }, [isNavOpen, swipeStartX, swipeStartY]);
+
             return (
-                <div className="min-h-screen flex flex-col font-sans bg-gray-50 text-gray-900">
+                <div className="h-screen flex flex-col font-sans bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-hidden">
                     {/* Header */}
-                    <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+                    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-20 shadow-sm flex-shrink-0">
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                             <div className="flex justify-between items-center h-16">
                                 <div className="flex items-center gap-3 select-none">
@@ -1334,15 +1378,15 @@
                                         <img src="img/logo.png" alt="Chaturvedi Classes Logo" className="w-full h-full object-contain" />
                                     </div>
                                     <div>
-                                        <h1 className="text-lg md:text-xl font-bold text-red-900 leading-tight">Chaturvedi <span className="text-yellow-600">Classes</span></h1>
-                                        <p className="text-[10px] md:text-xs text-gray-500 font-semibold tracking-wider">EXCELLENCE IN EDUCATION</p>
+                                        <h1 className="text-lg md:text-xl font-bold text-red-900 dark:text-red-400 leading-tight">Chaturvedi <span className="text-yellow-600 dark:text-yellow-500">Classes</span></h1>
+                                        <p className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-semibold tracking-wider">EXCELLENCE IN EDUCATION</p>
                                     </div>
                                 </div>
 
                                 <div className="flex items-center gap-4">
                                     <button
                                         onClick={toggleNav}
-                                        className="p-2 text-gray-600 hover:text-red-700 transition-colors rounded-lg hover:bg-gray-100"
+                                        className="p-2 text-gray-600 dark:text-gray-300 hover:text-red-700 dark:hover:text-red-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
                                         aria-label="Open navigation menu"
                                     >
                                         <Menu className="w-6 h-6" />
@@ -1362,29 +1406,34 @@
 
                         {/* Drawer */}
                         <div
-                            className={`absolute right-0 top-0 h-full w-[280px] max-w-[85vw] bg-white shadow-2xl transform transition-transform duration-200 ease-out ${isNavOpen ? 'translate-x-0' : 'translate-x-full'}`}
+                            className={`absolute right-0 top-0 h-full w-[280px] max-w-[85vw] bg-white dark:bg-gray-800 shadow-2xl transform transition-transform duration-200 ease-out ${isNavOpen ? 'translate-x-0' : 'translate-x-full'}`}
                             onClick={(e) => e.stopPropagation()}
                             style={{ maxHeight: '100vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}
                         >
                             <div className="flex flex-col h-full">
                                 {/* Drawer Header */}
-                                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+                                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
                                     <div className="flex items-center gap-2.5">
-                                        <div className="w-8 h-8 flex items-center justify-center overflow-hidden">
-                                            <img src="img/logo.png" alt="Chaturvedi Classes Logo" className="w-full h-full object-contain" />
+                                        <div className="w-8 h-8 flex items-center justify-center overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
+                                            {profilePicture ? (
+                                                <img src={profilePicture} alt="Profile" className="w-full h-full object-cover rounded-full" />
+                                            ) : (
+                                                <User className="w-5 h-5 text-red-700 dark:text-red-400" />
+                                            )}
                                         </div>
                                         <div>
-                                            <h2 className="text-base font-semibold text-red-900 leading-tight">{username}</h2>
-                                            <p className="text-[10px] text-gray-500 leading-tight">Chaturvedi Classes</p>
+                                            <h2 className="text-base font-semibold text-red-900 dark:text-red-400 leading-tight">{username}</h2>
+                                            <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">Chaturvedi Classes</p>
                                         </div>
                                     </div>
                                     <button
                                         onClick={closeNav}
-                                        className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors rounded-lg hover:bg-gray-100"
+                                        className="p-0 text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
                                         aria-label="Close menu"
+                                        style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                     >
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
                                         </svg>
                                     </button>
                                 </div>
@@ -1394,9 +1443,9 @@
                                     <nav className="space-y-1 px-4">
                                         <button
                                             onClick={() => { closeNav(); onNavigateToProfile(); }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-yellow-50 hover:text-red-700 rounded-xl transition-colors group"
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-200 hover:bg-yellow-50 dark:hover:bg-gray-700 hover:text-red-700 dark:hover:text-red-400 rounded-xl transition-colors group"
                                         >
-                                            <User className="w-5 h-5 text-gray-400 group-hover:text-red-700" />
+                                            <User className="w-5 h-5 text-gray-400 dark:text-gray-500 group-hover:text-red-700 dark:group-hover:text-red-400" />
                                             <span className="font-medium">Profile</span>
                                         </button>
 
@@ -1437,20 +1486,20 @@
                                             <span className="font-medium">Notifications</span>
                                         </button>
 
-                                        <div className="border-t border-gray-200 my-2"></div>
+                                        <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
 
                                         <button
                                             onClick={() => { closeNav(); onNavigateToSettings(); }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-yellow-50 hover:text-red-700 rounded-xl transition-colors group"
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-200 hover:bg-yellow-50 dark:hover:bg-gray-700 hover:text-red-700 dark:hover:text-red-400 rounded-xl transition-colors group"
                                         >
-                                            <svg className="w-5 h-5 text-gray-400 group-hover:text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg className="w-5 h-5 text-gray-400 dark:text-gray-500 group-hover:text-red-700 dark:group-hover:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                             </svg>
                                             <span className="font-medium">Settings</span>
                                         </button>
 
-                                        <div className="border-t border-gray-200 my-2"></div>
+                                        <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
 
                                         {/* More Apps Section */}
                                         <button
@@ -1458,17 +1507,17 @@
                                                 closeNav();
                                                 window.open('https://play.google.com/store/apps/dev?id=8205647922049206296', '_blank');
                                             }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-yellow-50 hover:text-red-700 rounded-xl transition-colors group"
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-200 hover:bg-yellow-50 dark:hover:bg-gray-700 hover:text-red-700 dark:hover:text-red-400 rounded-xl transition-colors group"
                                         >
-                                            <Grid className="w-5 h-5 text-gray-400 group-hover:text-red-700" />
+                                            <Grid className="w-5 h-5 text-gray-400 dark:text-gray-500 group-hover:text-red-700 dark:group-hover:text-red-400" />
                                             <span className="font-medium">More Apps</span>
                                         </button>
 
                                         <button
                                             onClick={() => { closeNav(); }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-yellow-50 hover:text-red-700 rounded-xl transition-colors group"
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-200 hover:bg-yellow-50 dark:hover:bg-gray-700 hover:text-red-700 dark:hover:text-red-400 rounded-xl transition-colors group"
                                         >
-                                            <Star className="w-5 h-5 text-gray-400 group-hover:text-red-700" />
+                                            <Star className="w-5 h-5 text-gray-400 dark:text-gray-500 group-hover:text-red-700 dark:group-hover:text-red-400" />
                                             <span className="font-medium">Rate App</span>
                                         </button>
 
@@ -1499,17 +1548,17 @@
                                                     });
                                                 }
                                             }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-yellow-50 hover:text-red-700 rounded-xl transition-colors group"
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-200 hover:bg-yellow-50 dark:hover:bg-gray-700 hover:text-red-700 dark:hover:text-red-400 rounded-xl transition-colors group"
                                         >
-                                            <Share2 className="w-5 h-5 text-gray-400 group-hover:text-red-700" />
+                                            <Share2 className="w-5 h-5 text-gray-400 dark:text-gray-500 group-hover:text-red-700 dark:group-hover:text-red-400" />
                                             <span className="font-medium">Share App</span>
                                         </button>
 
                                         <button
                                             onClick={() => { closeNav(); onNavigateToLocation(); }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-yellow-50 hover:text-red-700 rounded-xl transition-colors group"
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-200 hover:bg-yellow-50 dark:hover:bg-gray-700 hover:text-red-700 dark:hover:text-red-400 rounded-xl transition-colors group"
                                         >
-                                            <MapPin className="w-5 h-5 text-gray-400 group-hover:text-red-700" />
+                                            <MapPin className="w-5 h-5 text-gray-400 dark:text-gray-500 group-hover:text-red-700 dark:group-hover:text-red-400" />
                                             <span className="font-medium">Location</span>
                                         </button>
 
@@ -1517,19 +1566,19 @@
 
                                         <button
                                             onClick={() => { closeNav(); }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-yellow-50 hover:text-red-700 rounded-xl transition-colors group"
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-200 hover:bg-yellow-50 dark:hover:bg-gray-700 hover:text-red-700 dark:hover:text-red-400 rounded-xl transition-colors group"
                                         >
-                                            <Shield className="w-5 h-5 text-gray-400 group-hover:text-red-700" />
+                                            <Shield className="w-5 h-5 text-gray-400 dark:text-gray-500 group-hover:text-red-700 dark:group-hover:text-red-400" />
                                             <span className="font-medium">Privacy Policy</span>
                                         </button>
                                     </nav>
                                 </div>
 
                                 {/* Logout Button at Bottom */}
-                                <div className="border-t border-gray-200 p-4">
+                                <div className="border-t border-gray-200 dark:border-gray-700 p-4">
                                     <button
                                         onClick={() => { closeNav(); onLogout(); }}
-                                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-50 text-red-700 rounded-xl font-semibold hover:bg-red-100 transition-colors"
+                                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-xl font-semibold hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
                                     >
                                         <LogOut className="w-5 h-5" />
                                         <span>Logout</span>
@@ -1540,28 +1589,28 @@
                     </div>
 
                     {/* Main Content */}
-                    <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8">
+                    <main className="home-main-content flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
                         <div className="animate-in fade-in slide-in-from-bottom-8 duration-500">
-                            {/* Username Card - Overlapping with navbar */}
-                            <div className="bg-gradient-to-r from-red-50 to-yellow-50 rounded-2xl border border-red-100 p-6 mb-6 relative overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 -mt-6 pt-8">
+                            {/* Username Card - Fixed overlapping */}
+                            <div className="bg-gradient-to-r from-red-50 to-yellow-50 dark:from-gray-800 dark:to-gray-700 rounded-2xl border border-red-100 dark:border-gray-600 p-6 mb-6 relative overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 mt-4">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-4">
                                         <div
                                             onClick={handleUserIconClick}
-                                            className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm cursor-pointer hover:shadow-md transition-all overflow-hidden"
+                                            className="w-14 h-14 bg-white dark:bg-gray-700 rounded-full flex items-center justify-center shadow-sm cursor-pointer hover:shadow-md transition-all overflow-hidden"
                                             title="Click to change profile picture"
                                         >
                                             {profilePicture ? (
                                                 <img src={profilePicture} alt="Profile" className="w-full h-full object-cover rounded-full" />
                                             ) : (
-                                                <User className="w-8 h-8 text-red-700" />
+                                                <User className="w-8 h-8 text-red-700 dark:text-red-400" />
                                             )}
                                         </div>
                                         <div>
-                                            <h2 className="text-2xl md:text-3xl font-semibold text-gray-900">
-                                                Hey, <span className="text-red-700">{username.split(' ')[0]}</span>
+                                            <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 dark:text-gray-100">
+                                                Hey, <span className="text-red-700 dark:text-red-400">{username.split(' ')[0]}</span>
                                             </h2>
-                                            <p className="text-sm text-gray-600 mt-1">Ready to learn today?</p>
+                                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Ready to learn today?</p>
                                         </div>
                                     </div>
                                     <button
@@ -1670,12 +1719,12 @@
                                     </div>
 
                                     {/* Banner Indicators */}
-                                    <div className="flex justify-center gap-1.5 mt-4">
+                                    <div className="flex justify-center gap-2 mt-4">
                                         {[0, 1, 2].map((index) => (
                                             <button
                                                 key={index}
                                                 onClick={() => setBannerIndex(index)}
-                                                className={`h-1.5 rounded-full transition-all ${bannerIndex === index ? 'bg-red-700 w-6' : 'bg-gray-300 w-1.5'
+                                                className={`w-2 h-2 rounded-full transition-all ${bannerIndex === index ? 'bg-red-700' : 'bg-gray-300'
                                                     }`}
                                             />
                                         ))}
@@ -1688,8 +1737,8 @@
                                 <h3 className="text-lg font-bold text-gray-900 mb-2">Quick Actions</h3>
                                 <div className="relative group">
                                     {/* Scroll Fade Masks */}
-                                    <div className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-gray-50 to-transparent z-10 pointer-events-none transition-opacity duration-300 ${showLeftArrow ? 'opacity-100' : 'opacity-0'}`} />
-                                    <div className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-gray-50 to-transparent z-10 pointer-events-none transition-opacity duration-300 ${showRightArrow ? 'opacity-100' : 'opacity-0'}`} />
+                                    <div className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-gray-50 dark:from-gray-900 to-transparent z-10 pointer-events-none transition-opacity duration-300 ${showLeftArrow ? 'opacity-100' : 'opacity-0'}`} />
+                                    <div className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-gray-50 dark:from-gray-900 to-transparent z-10 pointer-events-none transition-opacity duration-300 ${showRightArrow ? 'opacity-100' : 'opacity-0'}`} />
 
                                     {showLeftArrow && (
                                         <button
@@ -1729,7 +1778,7 @@
 
                                             <button
                                                 onClick={() => onNavigateToNotifications()}
-                                                className="flex-shrink-0 flex flex-col items-center justify-center gap-1.5 w-20 h-20 bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-yellow-300 transition-all duration-300 group relative"
+                                                className="flex-shrink-0 flex flex-col items-center justify-center gap-1.5 w-20 h-20 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md hover:border-yellow-300 dark:hover:border-yellow-600 transition-all duration-300 group relative"
                                             >
                                                 <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center group-hover:bg-yellow-200 transition-colors relative">
                                                     <Bell className="w-5 h-5 text-yellow-700" />
@@ -1756,7 +1805,7 @@
 
                                             <button
                                                 onClick={() => onNavigateToQuiz()}
-                                                className="flex-shrink-0 flex flex-col items-center justify-center gap-1.5 w-20 h-20 bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-green-300 transition-all duration-300 group relative"
+                                                className="flex-shrink-0 flex flex-col items-center justify-center gap-1.5 w-20 h-20 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md hover:border-green-300 dark:hover:border-green-600 transition-all duration-300 group relative"
                                             >
                                                 <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center group-hover:bg-green-200 transition-colors">
                                                     <Book className="w-5 h-5 text-green-700" />
@@ -1774,9 +1823,9 @@
                                                 const container = document.getElementById('quick-actions-scroll');
                                                 if (container) container.scrollBy({ left: 100, behavior: 'smooth' });
                                             }}
-                                            className="absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white shadow-md rounded-full p-2 transition-all"
+                                            className="absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-800 shadow-md rounded-full p-2 transition-all"
                                         >
-                                            <ChevronRight className="w-5 h-5 text-gray-700" />
+                                            <ChevronRight className="w-5 h-5 text-gray-700 dark:text-gray-200" />
                                         </button>
                                     )}
                                 </div>
@@ -1785,7 +1834,7 @@
                             {/* Feature Cards - Grid Layout */}
                             <div className="mb-8">
                                 <div className="flex justify-between items-center mb-4">
-                                    <h3 className="text-lg font-bold text-gray-900">Tools & Resources</h3>
+                                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Tools & Resources</h3>
                                     <button
                                         onClick={onNavigateToFeatures}
                                         className="text-sm font-semibold text-red-700 hover:text-red-800 transition-colors"
@@ -1805,10 +1854,10 @@
 
                                         <div className="relative z-10 flex items-center justify-between">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-sm">
-                                                    <Book className="w-6 h-6 text-red-700" />
+                                                <div className="w-12 h-12 bg-white dark:bg-gray-700 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-sm">
+                                                    <Book className="w-6 h-6 text-red-700 dark:text-red-400" />
                                                 </div>
-                                                <h3 className="text-base font-semibold text-gray-900">NCERT Books</h3>
+                                                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">NCERT Books</h3>
                                             </div>
                                             <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-red-700 group-hover:translate-x-1 transition-all" />
                                         </div>
@@ -1850,10 +1899,10 @@
 
                                         <div className="relative z-10 flex items-center justify-between">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-sm">
-                                                    <Network className="w-6 h-6 text-purple-700" />
+                                                <div className="w-12 h-12 bg-white dark:bg-gray-700 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-sm">
+                                                    <Network className="w-6 h-6 text-purple-700 dark:text-purple-400" />
                                                 </div>
-                                                <h3 className="text-base font-semibold text-gray-900">Mind Map</h3>
+                                                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Mind Map</h3>
                                             </div>
                                             <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-purple-700 group-hover:translate-x-1 transition-all" />
                                         </div>
@@ -1873,64 +1922,66 @@
                                     </button>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="bg-white rounded-2xl border border-gray-200 p-4 hover:shadow-lg transition-all cursor-pointer group">
-                                        <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl mb-3 flex items-center justify-center">
-                                            <div className="w-16 h-16 bg-white/80 rounded-full flex items-center justify-center">
-                                                <svg className="w-8 h-8 text-red-700" fill="currentColor" viewBox="0 0 24 24">
+                                    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-all cursor-pointer group">
+                                        <div className="aspect-video bg-gradient-to-br from-gray-100 dark:from-gray-700 to-gray-200 dark:to-gray-600 rounded-xl mb-3 flex items-center justify-center">
+                                            <div className="w-16 h-16 bg-white/80 dark:bg-gray-800/80 rounded-full flex items-center justify-center">
+                                                <svg className="w-8 h-8 text-red-700 dark:text-red-400" fill="currentColor" viewBox="0 0 24 24">
                                                     <path d="M8 5v14l11-7z" />
                                                 </svg>
                                             </div>
                                         </div>
-                                        <h4 className="font-semibold text-gray-900">Educational Videos</h4>
-                                        <p className="text-xs text-gray-500 mt-1">Coming soon</p>
+                                        <h4 className="font-semibold text-gray-900 dark:text-gray-100">Educational Videos</h4>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Coming soon</p>
                                     </div>
-                                    <div className="bg-white rounded-2xl border border-gray-200 p-4 hover:shadow-lg transition-all cursor-pointer group">
-                                        <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl mb-3 flex items-center justify-center">
-                                            <div className="w-16 h-16 bg-white/80 rounded-full flex items-center justify-center">
-                                                <svg className="w-8 h-8 text-red-700" fill="currentColor" viewBox="0 0 24 24">
+                                    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-all cursor-pointer group">
+                                        <div className="aspect-video bg-gradient-to-br from-gray-100 dark:from-gray-700 to-gray-200 dark:to-gray-600 rounded-xl mb-3 flex items-center justify-center">
+                                            <div className="w-16 h-16 bg-white/80 dark:bg-gray-800/80 rounded-full flex items-center justify-center">
+                                                <svg className="w-8 h-8 text-red-700 dark:text-red-400" fill="currentColor" viewBox="0 0 24 24">
                                                     <path d="M8 5v14l11-7z" />
                                                 </svg>
                                             </div>
                                         </div>
-                                        <h4 className="font-semibold text-gray-900">Lecture Series</h4>
-                                        <p className="text-xs text-gray-500 mt-1">Coming soon</p>
+                                        <h4 className="font-semibold text-gray-900 dark:text-gray-100">Lecture Series</h4>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Coming soon</p>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Our Teachers Section */}
                             <div className="mb-8">
-                                <h3 className="text-lg font-bold text-gray-900 mb-4">Our Teachers</h3>
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Our Teachers</h3>
                                 <div className="grid grid-cols-2 gap-4">
                                     {/* Teacher 1 */}
-                                    <div className="bg-white rounded-2xl border border-gray-200 p-3 shadow-sm hover:shadow-lg transition-all duration-300 group text-center">
-                                        <div className="relative w-24 h-24 mx-auto mb-3 rounded-full overflow-hidden border-2 border-red-100 group-hover:border-red-300 transition-colors">
+                                    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-3 shadow-sm hover:shadow-lg transition-all duration-300 group text-center">
+                                        <div className="relative w-24 h-24 mx-auto mb-3 rounded-full overflow-hidden border-2 border-red-100 dark:border-gray-600 group-hover:border-red-300 dark:group-hover:border-red-500 transition-colors">
                                             <img
                                                 src="img/team-2.png"
                                                 alt="Anubhav Sir"
                                                 className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
-                                                loading="lazy"
+                                                loading="eager"
+                                                fetchpriority="high"
                                             />
                                         </div>
                                         <div className="flex items-center justify-center gap-1 mb-1">
-                                            <h4 className="font-bold text-gray-900 text-sm">Anubhav Sir</h4>
-                                            <BadgeCheck className="w-4 h-4 text-blue-500 fill-blue-50" />
+                                            <h4 className="font-bold text-gray-900 dark:text-gray-100 text-sm">Anubhav Sir</h4>
+                                            <BadgeCheck className="w-4 h-4 text-blue-500 dark:text-blue-400 fill-blue-50 dark:fill-blue-900" />
                                         </div>                               
                                     </div>
 
                                     {/* Teacher 2 */}
-                                    <div className="bg-white rounded-2xl border border-gray-200 p-3 shadow-sm hover:shadow-lg transition-all duration-300 group text-center">
-                                        <div className="relative w-24 h-24 mx-auto mb-3 rounded-full overflow-hidden border-2 border-red-100 group-hover:border-red-300 transition-colors">
+                                    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-3 shadow-sm hover:shadow-lg transition-all duration-300 group text-center">
+                                        <div className="relative w-24 h-24 mx-auto mb-3 rounded-full overflow-hidden border-2 border-red-100 dark:border-gray-600 group-hover:border-red-300 dark:group-hover:border-red-500 transition-colors">
                                             <img
                                                 src="img/team-1.png"
                                                 alt="Anupriya Ma'am"
                                                 className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
-                                                loading="lazy"
+                                                loading="eager"
+                                                fetchpriority="high"
                                             />
                                         </div>
                                         <div className="flex items-center justify-center gap-1 mb-1">
-                                            <h4 className="font-bold text-gray-900 text-sm">Anupriya Ma'am</h4>
-                                            <BadgeCheck className="w-4 h-4 text-blue-500 fill-blue-50" />
+                                            <h4 className="font-bold text-gray-900 dark:text-gray-100 text-sm">Anupriya Ma'am</h4>
+                                            <BadgeCheck className="w-4 h-4 text-blue-500 dark:text-blue-400 fill-blue-50 dark:fill-blue-900" />
                                         </div>                                        
                                     </div>
                                 </div>
@@ -2788,12 +2839,19 @@
                 applyTheme(newTheme);
             };
 
-            const handleDeleteAllData = async () => {
+            const handleDeleteAllData = async (userEmail) => {
                 try {
                     const auth = window.firebaseAuth;
                     const db = window.firebaseDb;
                     const rtdb = window.firebaseRtdb;
                     const user = auth.currentUser;
+
+                    if (!user || user.email !== userEmail) {
+                        if (window.showToast) {
+                            window.showToast('Email does not match. Deletion cancelled.', 'error');
+                        }
+                        return;
+                    }
 
                     if (user) {
                         // Delete user data from Firestore
@@ -2801,6 +2859,15 @@
                         
                         // Delete FCM token from Realtime Database
                         await rtdb.ref(`fcmTokens/${user.uid}`).remove();
+                        
+                        // Delete from Supabase if available
+                        if (window.supabaseClient) {
+                            try {
+                                await window.supabaseClient.auth.admin.deleteUser(user.uid);
+                            } catch (supabaseError) {
+                                console.log('Supabase deletion error (may not be admin):', supabaseError);
+                            }
+                        }
                     }
 
                     // Clear all localStorage
@@ -2831,12 +2898,19 @@
                 }
             };
 
-            const handleDeleteProfile = async () => {
+            const handleDeleteProfile = async (userEmail) => {
                 try {
                     const auth = window.firebaseAuth;
                     const db = window.firebaseDb;
                     const rtdb = window.firebaseRtdb;
                     const user = auth.currentUser;
+
+                    if (!user || user.email !== userEmail) {
+                        if (window.showToast) {
+                            window.showToast('Email does not match. Deletion cancelled.', 'error');
+                        }
+                        return;
+                    }
 
                     if (user) {
                         // Delete user document from Firestore
@@ -2844,6 +2918,15 @@
                         
                         // Delete FCM token
                         await rtdb.ref(`fcmTokens/${user.uid}`).remove();
+                        
+                        // Delete from Supabase if available
+                        if (window.supabaseClient) {
+                            try {
+                                await window.supabaseClient.auth.admin.deleteUser(user.uid);
+                            } catch (supabaseError) {
+                                console.log('Supabase deletion error (may not be admin):', supabaseError);
+                            }
+                        }
 
                         // Clear user-related localStorage
                         localStorage.removeItem('username');
@@ -2875,28 +2958,28 @@
             };
 
             return (
-                <div className="min-h-screen flex flex-col font-sans bg-gray-50 text-gray-900">
-                    <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+                <div className="h-screen flex flex-col font-sans bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-hidden">
+                    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-20 shadow-sm flex-shrink-0">
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                             <div className="flex justify-between items-center h-16">
                                 <div className="flex items-center gap-3">
                                     <button
                                         onClick={onBackToHome}
-                                        className="p-2 text-gray-600 hover:text-red-700 transition-colors rounded-lg hover:bg-gray-100"
+                                        className="p-2 text-gray-600 dark:text-gray-300 hover:text-red-700 dark:hover:text-red-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
                                     >
                                         <ArrowLeft className="w-6 h-6" />
                                     </button>
-                                    <h1 className="text-xl font-bold text-red-900">Settings</h1>
+                                    <h1 className="text-xl font-bold text-red-900 dark:text-red-400">Settings</h1>
                                 </div>
                             </div>
                         </div>
                     </header>
 
-                    <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                    <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
                         <div className="space-y-6">
                             {/* Theme Settings */}
-                            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-                                <h2 className="text-lg font-semibold text-gray-900 mb-4">Appearance</h2>
+                            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
+                                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Appearance</h2>
                                 <div className="space-y-3">
                                     <button
                                         onClick={() => handleThemeChange('light')}
@@ -2928,8 +3011,8 @@
                                         onClick={() => handleThemeChange('dark')}
                                         className={`w-full flex items-center justify-between p-4 rounded-lg border-2 transition-all ${
                                             theme === 'dark'
-                                                ? 'border-red-700 bg-red-50'
-                                                : 'border-gray-200 hover:border-gray-300'
+                                                ? 'border-red-700 dark:border-red-600 bg-red-50 dark:bg-red-900/20'
+                                                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                                         }`}
                                     >
                                         <div className="flex items-center gap-3">
@@ -2939,8 +3022,8 @@
                                                 </svg>
                                             </div>
                                             <div className="text-left">
-                                                <div className="font-medium text-gray-900">Dark Mode</div>
-                                                <div className="text-sm text-gray-500">Easier on the eyes</div>
+                                                <div className="font-medium text-gray-900 dark:text-gray-100">Dark Mode</div>
+                                                <div className="text-sm text-gray-500 dark:text-gray-400">Easier on the eyes</div>
                                             </div>
                                         </div>
                                         {theme === 'dark' && (
@@ -2953,12 +3036,16 @@
                             </div>
 
                             {/* Account Actions */}
-                            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-                                <h2 className="text-lg font-semibold text-gray-900 mb-4">Account</h2>
+                            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
+                                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Account</h2>
                                 <div className="space-y-3">
                                     <button
-                                        onClick={() => setShowDeleteConfirm(true)}
-                                        className="w-full flex items-center justify-between p-4 rounded-lg border-2 border-red-200 hover:border-red-300 bg-red-50 hover:bg-red-100 transition-all"
+                                        onClick={() => {
+                                            setDeleteType('profile');
+                                            setShowDeleteConfirm(true);
+                                            setEmailInput('');
+                                        }}
+                                        className="w-full flex items-center justify-between p-4 rounded-lg border-2 border-red-200 dark:border-red-800 hover:border-red-300 dark:hover:border-red-700 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition-all"
                                     >
                                         <div className="flex items-center gap-3">
                                             <svg className="w-5 h-5 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3000,17 +3087,17 @@
                             </div>
 
                             {/* App Info */}
-                            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-                                <h2 className="text-lg font-semibold text-gray-900 mb-4">About</h2>
+                            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
+                                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">About</h2>
                                 <div className="space-y-3">
-                                    <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                                    <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
                                         <div className="flex items-center gap-3">
-                                            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
-                                            <span className="font-medium text-gray-700">App Version</span>
+                                            <span className="font-medium text-gray-700 dark:text-gray-200">App Version</span>
                                         </div>
-                                        <span className="text-sm font-semibold text-red-700">{appVersion}</span>
+                                        <span className="text-sm font-semibold text-red-700 dark:text-red-400">{appVersion}</span>
                                     </div>
                                 </div>
                             </div>
@@ -3020,24 +3107,77 @@
                     {/* Delete Profile Confirmation Modal */}
                     {showDeleteConfirm && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                            <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
-                                <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Profile</h3>
-                                <p className="text-gray-600 mb-6">Are you sure you want to delete your profile? This will remove your account and all associated data. This action cannot be undone.</p>
+                            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Delete Profile</h3>
+                                <p className="text-gray-600 dark:text-gray-300 mb-4">Are you sure you want to delete your profile? This will remove your account and all associated data. This action cannot be undone.</p>
+                                <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Enter your email to confirm:</p>
+                                <input
+                                    type="email"
+                                    value={emailInput}
+                                    onChange={(e) => setEmailInput(e.target.value)}
+                                    placeholder="Enter your email"
+                                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:text-gray-100"
+                                    autoFocus
+                                />
                                 <div className="flex gap-3">
                                     <button
-                                        onClick={() => setShowDeleteConfirm(false)}
-                                        className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+                                        onClick={() => {
+                                            setShowDeleteConfirm(false);
+                                            setEmailInput('');
+                                        }}
+                                        className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         onClick={() => {
                                             setShowDeleteConfirm(false);
-                                            handleDeleteProfile();
+                                            handleDeleteProfile(emailInput.trim());
+                                            setEmailInput('');
                                         }}
                                         className="flex-1 px-4 py-3 bg-red-700 text-white rounded-lg font-semibold hover:bg-red-800 transition-colors"
                                     >
                                         Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Delete All Data Confirmation Modal */}
+                    {showDeleteAllConfirm && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Delete All Data</h3>
+                                <p className="text-gray-600 dark:text-gray-300 mb-4">Are you sure you want to delete all app data? This will remove everything including your profile, settings, and all stored data. This action cannot be undone.</p>
+                                <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Enter your email to confirm:</p>
+                                <input
+                                    type="email"
+                                    value={emailInput}
+                                    onChange={(e) => setEmailInput(e.target.value)}
+                                    placeholder="Enter your email"
+                                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-700 dark:text-gray-100"
+                                    autoFocus
+                                />
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => {
+                                            setShowDeleteAllConfirm(false);
+                                            setEmailInput('');
+                                        }}
+                                        className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setShowDeleteAllConfirm(false);
+                                            handleDeleteAllData(emailInput.trim());
+                                            setEmailInput('');
+                                        }}
+                                        className="flex-1 px-4 py-3 bg-red-700 text-white rounded-lg font-semibold hover:bg-red-800 transition-colors"
+                                    >
+                                        Delete All
                                     </button>
                                 </div>
                             </div>

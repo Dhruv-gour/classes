@@ -183,16 +183,104 @@
             border-color: #4b5563;
         }
 
+        .dark-mode .bg-gray-800 {
+            background-color: #1f2937;
+        }
+
+        .dark-mode .bg-gray-700 {
+            background-color: #374151;
+        }
+
+        .dark-mode .text-gray-100 {
+            color: #f3f4f6;
+        }
+
+        .dark-mode .text-gray-200 {
+            color: #e5e7eb;
+        }
+
+        .dark-mode .text-gray-300 {
+            color: #d1d5db;
+        }
+
+        .dark-mode .text-gray-400 {
+            color: #9ca3af;
+        }
+
+        .dark-mode .border-gray-600 {
+            border-color: #4b5563;
+        }
+
+        .dark-mode .border-gray-700 {
+            border-color: #374151;
+        }
+
+        .dark-mode .text-red-400 {
+            color: #f87171;
+        }
+
+        .dark-mode .text-red-700 {
+            color: #b91c1c;
+        }
+
+        .dark-mode .bg-red-900\/20 {
+            background-color: rgba(127, 29, 29, 0.2);
+        }
+
+        .dark-mode .bg-red-900\/30 {
+            background-color: rgba(127, 29, 29, 0.3);
+        }
+
+        .dark-mode .bg-red-900\/40 {
+            background-color: rgba(127, 29, 29, 0.4);
+        }
+
+        /* Fix scrolling - only enable where needed for mobile app feel */
+        html {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            height: 100vh;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+        }
+
+        #root {
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Only allow scrolling in main content areas */
+        .home-main-content,
+        main.overflow-y-auto,
+        .flex-1.overflow-y-auto,
+        main[style*="overflow-y"] {
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            max-height: 100%;
+        }
+
+        /* Prevent scrolling on fixed containers */
+        .h-screen:not(.overflow-y-auto):not(.home-main-content) {
+            overflow: hidden;
+        }
+        
+        /* Ensure drawer can scroll */
+        div[style*="overflowY"] {
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch;
+        }
+
         /* Mobile App Feel - Remove website-like elements */
         body {
             -webkit-touch-callout: none;
             overscroll-behavior: none;
             touch-action: pan-y;
-        }
-
-        #root {
-            min-height: 100vh;
-            -webkit-overflow-scrolling: touch;
         }
 
         /* Hide scrollbars but keep functionality */
