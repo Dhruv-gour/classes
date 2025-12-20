@@ -1,7 +1,7 @@
 {
   "name": "Chaturvedi Classes",
   "short_name": "Chaturvedi Classes",
-  "start_url": "classesmain.netlify.app",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f9fafb",

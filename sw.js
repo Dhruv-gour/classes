@@ -50,16 +50,15 @@ self.addEventListener('install', (event) => {
     <title>No Internet Connection - Chaturvedi Classes</title>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
-        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#f9fafb;color:#111827;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:linear-gradient(135deg,#fafafa 0%,#f5f5f5 100%);color:#111827;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
         .container{width:100%;max-width:28rem;text-align:center;animation:fadeInUp 0.5s ease-out}
         @keyframes fadeInUp{from{opacity:0;transform:translateY(1rem)}to{opacity:1;transform:translateY(0)}}
-        .logo{width:5rem;height:5rem;margin:0 auto 2rem;display:flex;align-items:center;justify-content:center;overflow:hidden}
-        .icon-circle{width:6rem;height:6rem;background:#fef2f2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem}
-        .icon-circle svg{width:3rem;height:3rem;color:#b91c1c}
-        h1{font-size:1.875rem;font-weight:700;color:#111827;margin-bottom:1rem}
-        @media(min-width:768px){h1{font-size:2.25rem}}
-        .description{color:#4b5563;font-size:1.125rem;margin-bottom:2rem}
-        .status-card{background:white;border-radius:1rem;border:1px solid #e5e7eb;padding:1.5rem;margin-bottom:1.5rem}
+        .icon-circle{width:5rem;height:5rem;background:linear-gradient(135deg,#fef2f2 0%,#fee2e2 100%);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 2rem;box-shadow:0 4px 12px rgba(185,28,28,0.1)}
+        .icon-circle svg{width:2.5rem;height:2.5rem;color:#dc2626}
+        h1{font-size:1.75rem;font-weight:700;color:#1f2937;margin-bottom:0.75rem;letter-spacing:-0.02em}
+        @media(min-width:768px){h1{font-size:2rem}}
+        .description{color:#6b7280;font-size:1rem;margin-bottom:2rem;line-height:1.6;max-width:24rem;margin-left:auto;margin-right:auto}
+        .status-card{background:white;border-radius:1rem;border:1px solid #f3f4f6;padding:1.25rem;margin-bottom:1.5rem;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
         .status-row{display:flex;align-items:center;justify-content:center;gap:0.75rem;margin-bottom:1rem}
         .status-text{font-size:0.875rem;font-weight:500;color:#374151}
         .status-info{font-size:0.75rem;color:#6b7280}
@@ -68,16 +67,15 @@ self.addEventListener('install', (event) => {
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
         .spinner{width:1.25rem;height:1.25rem;border:2px solid #fbbf24;border-top-color:transparent;border-radius:50%;animation:spin 2s linear infinite}
         @keyframes spin{to{transform:rotate(360deg)}}
-        .retry-button{width:100%;background:#b91c1c;color:white;padding:1rem;border-radius:0.75rem;font-weight:700;font-size:1.125rem;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:0.5rem;transition:all 0.3s;box-shadow:0 10px 15px -3px rgba(185,28,28,0.1)}
-        .retry-button:hover:not(:disabled){background:#991b1b;box-shadow:0 20px 25px -5px rgba(185,28,28,0.1)}
+        .retry-button{width:100%;background:linear-gradient(135deg,#dc2626 0%,#b91c1c 100%);color:white;padding:0.875rem 1.5rem;border-radius:0.75rem;font-weight:600;font-size:1rem;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:0.5rem;transition:all 0.2s ease;box-shadow:0 4px 12px rgba(220,38,38,0.25)}
+        .retry-button:hover:not(:disabled){background:linear-gradient(135deg,#b91c1c 0%,#991b1b 100%);box-shadow:0 6px 16px rgba(220,38,38,0.3);transform:translateY(-1px)}
         .retry-button:disabled{opacity:0.5;cursor:not-allowed}
         .retry-button svg{width:1.25rem;height:1.25rem}
-        .footer{margin-top:2rem;font-size:0.75rem;color:#9ca3af}
+        .footer{margin-top:2rem;font-size:0.6875rem;color:#9ca3af;font-weight:400;letter-spacing:0.02em}
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="logo"><img src="img/logo.png" alt="Logo" onerror="this.style.display='none'"></div>
         <div class="icon-circle"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" x2="23" y1="1" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" x2="12.01" y1="20" y2="20"/></svg></div>
         <h1>No Internet Connection</h1>
         <p class="description">It looks like you're offline. Please check your internet connection and try again.</p>
@@ -89,7 +87,7 @@ self.addEventListener('install', (event) => {
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
             <span>Retry Now</span>
         </button>
-        <p class="footer">Chaturvedi Classes - Excellence in Education</p>
+        <p class="footer">Chaturvedi Classes</p>
     </div>
     <script>
         let retryCount=0;let retryInterval=null;const lastUrl=localStorage.getItem('lastVisitedUrl')||'index.html';

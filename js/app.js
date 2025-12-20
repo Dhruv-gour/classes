@@ -1132,25 +1132,44 @@
 
                 if (userId) {
                     try {
+                        // Show custom modal first
+                        const userWantsNotifications = await window.showNotificationPermissionModal();
+                        
+                        if (!userWantsNotifications) {
+                            if (btn) btn.innerText = "Enable Now";
+                            return;
+                        }
+
                         const granted = await initializePushNotifications(userId, true);
                         if (granted) {
                             setNotificationPermission('granted');
                             setShowNotificationBanner(false);
-                            alert("Notifications successfully enabled!");
+                            if (window.showToast) {
+                                window.showToast("Notifications successfully enabled!", 'success');
+                            }
                         } else {
                             if (btn) btn.innerText = "Enable Now";
                             if (Notification.permission === 'denied') {
-                                alert("Notification permission was denied. Please reset permissions in your browser settings.");
+                                if (window.showToast) {
+                                    window.showToast("Notification permission was denied. Please reset permissions in your browser settings.", 'warning');
+                                }
                             } else {
-                                alert("Could not enable notifications. Please try again.");
+                                if (window.showToast) {
+                                    window.showToast("Could not enable notifications. Please try again.", 'error');
+                                }
                             }
                         }
                     } catch (e) {
                         console.error("Handler error:", e);
                         if (btn) btn.innerText = "Retry";
+                        if (window.showToast) {
+                            window.showToast("An error occurred. Please try again.", 'error');
+                        }
                     }
                 } else {
-                    alert("Please log in to enable notifications.");
+                    if (window.showToast) {
+                        window.showToast("Please log in to enable notifications.", 'warning');
+                    }
                     if (btn) btn.innerText = "Enable Now";
                 }
             };
@@ -1246,7 +1265,7 @@
                 } else {
                     // Fallback: copy to clipboard
                     navigator.clipboard.writeText(fullText).then(() => {
-                        alert('Link copied to clipboard!');
+                        if (window.showToast) window.showToast('Link copied to clipboard!', 'success');
                     }).catch(() => {
                         // Final fallback
                         const textArea = document.createElement('textarea');
@@ -1255,7 +1274,7 @@
                         textArea.select();
                         document.execCommand('copy');
                         document.body.removeChild(textArea);
-                        alert('Link copied to clipboard!');
+                        if (window.showToast) window.showToast('Link copied to clipboard!', 'success');
                     });
                 }
             };
@@ -1274,13 +1293,17 @@
                 if (file) {
                     // Validate file type
                     if (!file.type.startsWith('image/')) {
-                        alert('Please select an image file');
+                        if (window.showToast) {
+                            window.showToast('Please select an image file', 'warning');
+                        } else {
+                            alert('Please select an image file');
+                        }
                         return;
                     }
 
                     // Validate file size (max 2MB)
                     if (file.size > 2 * 1024 * 1024) {
-                        alert('Image size should be less than 2MB');
+                        if (window.showToast) window.showToast('Image size should be less than 2MB', 'warning');
                         return;
                     }
 
@@ -1464,7 +1487,7 @@
                                                     }).catch(err => console.log('Error sharing:', err));
                                                 } else {
                                                     navigator.clipboard.writeText(fullText).then(() => {
-                                                        alert('Link copied to clipboard!');
+                                                        if (window.showToast) window.showToast('Link copied to clipboard!', 'success');
                                                     }).catch(() => {
                                                         const textArea = document.createElement('textarea');
                                                         textArea.value = fullText;
@@ -1472,7 +1495,7 @@
                                                         textArea.select();
                                                         document.execCommand('copy');
                                                         document.body.removeChild(textArea);
-                                                        alert('Link copied to clipboard!');
+                                                        if (window.showToast) window.showToast('Link copied to clipboard!', 'success');
                                                     });
                                                 }
                                             }}
@@ -2119,7 +2142,7 @@
                 } else {
                     // Fallback: copy to clipboard
                     navigator.clipboard.writeText(shareText).then(() => {
-                        alert('Score and app link copied to clipboard!');
+                        if (window.showToast) window.showToast('Score and app link copied to clipboard!', 'success');
                     }).catch(() => {
                         // Final fallback
                         const textArea = document.createElement('textarea');
@@ -2128,7 +2151,7 @@
                         textArea.select();
                         document.execCommand('copy');
                         document.body.removeChild(textArea);
-                        alert('Score and app link copied to clipboard!');
+                        if (window.showToast) window.showToast('Score and app link copied to clipboard!', 'success');
                     });
                 }
             };
@@ -3574,7 +3597,13 @@
                 // If permission is default (not asked yet) or forceRequest is true, request permission
                 if (permission === 'default' || forceRequest) {
                     console.log('Requesting notification permission...');
-                    permission = await Notification.requestPermission();
+                    // Only call browser API directly if forceRequest is true (user already confirmed in modal)
+                    if (forceRequest) {
+                        permission = await Notification.requestPermission();
+                    } else {
+                        // For default case, return false - let the user trigger via button
+                        return false;
+                    }
                 }
 
                 if (permission === 'granted') {
