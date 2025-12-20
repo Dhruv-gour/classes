@@ -524,40 +524,80 @@
                                                     title: newNotificationTitle,
                                                     body: newNotificationMessage,
                                                     icon: '/img/logo.png',
+                                                    click_action: window.location.origin,
+                                                    sound: 'default'
+                                                },
+                                                data: {
+                                                    title: newNotificationTitle,
+                                                    body: newNotificationMessage,
                                                     click_action: window.location.origin
                                                 },
-                                                priority: 'high'
+                                                priority: 'high',
+                                                time_to_live: 86400
                                             })
                                         });
                                         
+                                        const responseText = await response.text();
+                                        console.log('FCM Response Status:', response.status);
+                                        console.log('FCM Response Text:', responseText);
+                                        
                                         if (!response.ok) {
-                                            const errorText = await response.text();
-                                            throw new Error(`HTTP ${response.status}: ${errorText}`);
+                                            // Try to parse error if it's JSON
+                                            let errorMessage = `HTTP ${response.status}`;
+                                            try {
+                                                const errorJson = JSON.parse(responseText);
+                                                errorMessage = errorJson.error?.message || errorJson.error || responseText;
+                                            } catch {
+                                                errorMessage = responseText || `HTTP ${response.status}`;
+                                            }
+                                            throw new Error(errorMessage);
                                         }
                                         
-                                        const result = await response.json();
+                                        const result = JSON.parse(responseText);
                                         console.log('FCM Send Result:', result);
                                         
                                         // Count successes and failures
-                                        if (result.results) {
+                                        if (result.results && Array.isArray(result.results)) {
                                             result.results.forEach((res, idx) => {
                                                 if (res.error) {
                                                     failureCount++;
                                                     console.warn(`Token ${i + idx} failed:`, res.error);
+                                                    // Remove invalid tokens
+                                                    if (res.error === 'InvalidRegistration' || res.error === 'NotRegistered') {
+                                                        const invalidToken = batch[idx];
+                                                        // Remove from database
+                                                        window.firebaseRtdb.ref('fcmTokens').orderByChild('token').equalTo(invalidToken).once('value').then(snapshot => {
+                                                            snapshot.forEach(child => {
+                                                                child.ref.remove();
+                                                            });
+                                                        });
+                                                    }
                                                 } else {
                                                     successCount++;
                                                 }
                                             });
-                                        } else if (result.success > 0) {
-                                            successCount += result.success;
+                                        } else if (result.success !== undefined) {
+                                            successCount += result.success || 0;
                                         }
                                         
-                                        if (result.failure > 0) {
-                                            failureCount += result.failure;
+                                        if (result.failure !== undefined) {
+                                            failureCount += result.failure || 0;
+                                        }
+                                        
+                                        // If no results array but we have success/failure counts
+                                        if (!result.results && result.success === undefined && result.failure === undefined) {
+                                            // Assume all failed if we can't determine
+                                            console.warn('Unable to determine FCM result, assuming failure');
+                                            failureCount += batch.length;
                                         }
                                         
                                     } catch (batchError) {
                                         console.error(`Error sending batch ${i / batchSize + 1}:`, batchError);
+                                        console.error('Error details:', {
+                                            message: batchError.message,
+                                            stack: batchError.stack,
+                                            name: batchError.name
+                                        });
                                         failureCount += batch.length;
                                     }
                                 }

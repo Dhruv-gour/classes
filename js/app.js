@@ -1083,7 +1083,7 @@
         }
 
         // --- Home Page Component ---
-        function HomePage({ onNavigateToLibrary, username, onLogout, onNavigateToProfile, onNavigateToQuiz, onNavigateToAI, onNavigateToFeatures, onNavigateToLocation, onNavigateToNotifications, onNavigateToAllClasses, onNavigateToPYQ, onNavigateToMindMap }) {
+        function HomePage({ onNavigateToLibrary, username, onLogout, onNavigateToProfile, onNavigateToQuiz, onNavigateToAI, onNavigateToFeatures, onNavigateToLocation, onNavigateToNotifications, onNavigateToAllClasses, onNavigateToPYQ, onNavigateToMindMap, onNavigateToSettings }) {
             const [isNavOpen, setIsNavOpen] = useState(false);
             const [profilePicture, setProfilePicture] = useState(localStorage.getItem('profilePicture') || '');
             const [bannerIndex, setBannerIndex] = useState(0);
@@ -1368,22 +1368,22 @@
                         >
                             <div className="flex flex-col h-full">
                                 {/* Drawer Header */}
-                                <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 flex items-center justify-center overflow-hidden">
+                                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-8 h-8 flex items-center justify-center overflow-hidden">
                                             <img src="img/logo.png" alt="Chaturvedi Classes Logo" className="w-full h-full object-contain" />
                                         </div>
                                         <div>
-                                            <h2 className="text-lg font-bold text-red-900">{username}</h2>
-                                            <p className="text-xs text-gray-500">Chaturvedi Classes</p>
+                                            <h2 className="text-base font-semibold text-red-900 leading-tight">{username}</h2>
+                                            <p className="text-[10px] text-gray-500 leading-tight">Chaturvedi Classes</p>
                                         </div>
                                     </div>
                                     <button
                                         onClick={closeNav}
-                                        className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-lg hover:bg-gray-100"
+                                        className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors rounded-lg hover:bg-gray-100"
                                         aria-label="Close menu"
                                     >
-                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                                         </svg>
                                     </button>
@@ -1440,7 +1440,7 @@
                                         <div className="border-t border-gray-200 my-2"></div>
 
                                         <button
-                                            onClick={() => { closeNav(); }}
+                                            onClick={() => { closeNav(); onNavigateToSettings(); }}
                                             className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-yellow-50 hover:text-red-700 rounded-xl transition-colors group"
                                         >
                                             <svg className="w-5 h-5 text-gray-400 group-hover:text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1670,12 +1670,12 @@
                                     </div>
 
                                     {/* Banner Indicators */}
-                                    <div className="flex justify-center gap-2 mt-4">
+                                    <div className="flex justify-center gap-1.5 mt-4">
                                         {[0, 1, 2].map((index) => (
                                             <button
                                                 key={index}
                                                 onClick={() => setBannerIndex(index)}
-                                                className={`w-2 h-2 rounded-full transition-all ${bannerIndex === index ? 'bg-red-700 w-6' : 'bg-gray-300'
+                                                className={`h-1.5 rounded-full transition-all ${bannerIndex === index ? 'bg-red-700 w-6' : 'bg-gray-300 w-1.5'
                                                     }`}
                                             />
                                         ))}
@@ -2760,6 +2760,293 @@
             );
         }
 
+        // --- Settings Screen ---
+        function SettingsScreen({ onBackToHome, onLogout }) {
+            const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
+            const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+            const appVersion = '1.0';
+
+            useEffect(() => {
+                // Apply theme on mount
+                applyTheme(theme);
+            }, [theme]);
+
+            const applyTheme = (newTheme) => {
+                const root = document.documentElement;
+                if (newTheme === 'dark') {
+                    root.classList.add('dark');
+                    document.body.classList.add('dark-mode');
+                } else {
+                    root.classList.remove('dark');
+                    document.body.classList.remove('dark-mode');
+                }
+            };
+
+            const handleThemeChange = (newTheme) => {
+                setTheme(newTheme);
+                localStorage.setItem('theme', newTheme);
+                applyTheme(newTheme);
+            };
+
+            const handleDeleteAllData = async () => {
+                try {
+                    const auth = window.firebaseAuth;
+                    const db = window.firebaseDb;
+                    const rtdb = window.firebaseRtdb;
+                    const user = auth.currentUser;
+
+                    if (user) {
+                        // Delete user data from Firestore
+                        await db.collection('users').doc(user.uid).delete();
+                        
+                        // Delete FCM token from Realtime Database
+                        await rtdb.ref(`fcmTokens/${user.uid}`).remove();
+                    }
+
+                    // Clear all localStorage
+                    localStorage.clear();
+
+                    // Clear all sessionStorage
+                    sessionStorage.clear();
+
+                    // Sign out
+                    if (auth) {
+                        await auth.signOut();
+                    }
+
+                    // Show success message
+                    if (window.showToast) {
+                        window.showToast('All data deleted successfully', 'success');
+                    }
+
+                    // Redirect to login after a short delay
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } catch (error) {
+                    console.error('Error deleting data:', error);
+                    if (window.showToast) {
+                        window.showToast('Error deleting data. Please try again.', 'error');
+                    }
+                }
+            };
+
+            const handleDeleteProfile = async () => {
+                try {
+                    const auth = window.firebaseAuth;
+                    const db = window.firebaseDb;
+                    const rtdb = window.firebaseRtdb;
+                    const user = auth.currentUser;
+
+                    if (user) {
+                        // Delete user document from Firestore
+                        await db.collection('users').doc(user.uid).delete();
+                        
+                        // Delete FCM token
+                        await rtdb.ref(`fcmTokens/${user.uid}`).remove();
+
+                        // Clear user-related localStorage
+                        localStorage.removeItem('username');
+                        localStorage.removeItem('userEmail');
+                        localStorage.removeItem('userId');
+                        localStorage.removeItem('profilePicture');
+                        localStorage.removeItem('userClass');
+                        localStorage.removeItem('notificationPermission');
+                        localStorage.removeItem('hasUnreadNotifications');
+                        localStorage.removeItem('lastNotificationCheck');
+
+                        // Sign out
+                        await auth.signOut();
+
+                        if (window.showToast) {
+                            window.showToast('Profile deleted successfully', 'success');
+                        }
+
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    }
+                } catch (error) {
+                    console.error('Error deleting profile:', error);
+                    if (window.showToast) {
+                        window.showToast('Error deleting profile. Please try again.', 'error');
+                    }
+                }
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col font-sans bg-gray-50 text-gray-900">
+                    <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div className="flex justify-between items-center h-16">
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={onBackToHome}
+                                        className="p-2 text-gray-600 hover:text-red-700 transition-colors rounded-lg hover:bg-gray-100"
+                                    >
+                                        <ArrowLeft className="w-6 h-6" />
+                                    </button>
+                                    <h1 className="text-xl font-bold text-red-900">Settings</h1>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                        <div className="space-y-6">
+                            {/* Theme Settings */}
+                            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                                <h2 className="text-lg font-semibold text-gray-900 mb-4">Appearance</h2>
+                                <div className="space-y-3">
+                                    <button
+                                        onClick={() => handleThemeChange('light')}
+                                        className={`w-full flex items-center justify-between p-4 rounded-lg border-2 transition-all ${
+                                            theme === 'light'
+                                                ? 'border-red-700 bg-red-50'
+                                                : 'border-gray-200 hover:border-gray-300'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center">
+                                                <svg className="w-6 h-6 text-yellow-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                                                </svg>
+                                            </div>
+                                            <div className="text-left">
+                                                <div className="font-medium text-gray-900">Light Mode</div>
+                                                <div className="text-sm text-gray-500">Default appearance</div>
+                                            </div>
+                                        </div>
+                                        {theme === 'light' && (
+                                            <svg className="w-5 h-5 text-red-700" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                            </svg>
+                                        )}
+                                    </button>
+
+                                    <button
+                                        onClick={() => handleThemeChange('dark')}
+                                        className={`w-full flex items-center justify-between p-4 rounded-lg border-2 transition-all ${
+                                            theme === 'dark'
+                                                ? 'border-red-700 bg-red-50'
+                                                : 'border-gray-200 hover:border-gray-300'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center">
+                                                <svg className="w-6 h-6 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                                                </svg>
+                                            </div>
+                                            <div className="text-left">
+                                                <div className="font-medium text-gray-900">Dark Mode</div>
+                                                <div className="text-sm text-gray-500">Easier on the eyes</div>
+                                            </div>
+                                        </div>
+                                        {theme === 'dark' && (
+                                            <svg className="w-5 h-5 text-red-700" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                            </svg>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Account Actions */}
+                            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                                <h2 className="text-lg font-semibold text-gray-900 mb-4">Account</h2>
+                                <div className="space-y-3">
+                                    <button
+                                        onClick={() => setShowDeleteConfirm(true)}
+                                        className="w-full flex items-center justify-between p-4 rounded-lg border-2 border-red-200 hover:border-red-300 bg-red-50 hover:bg-red-100 transition-all"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <svg className="w-5 h-5 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                            <div className="text-left">
+                                                <div className="font-medium text-red-700">Delete Profile</div>
+                                                <div className="text-sm text-red-600">Remove your account and profile data</div>
+                                            </div>
+                                        </div>
+                                        <svg className="w-5 h-5 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </button>
+
+                                    <button
+                                        onClick={async () => {
+                                            const confirmed = await window.showConfirm?.('Are you sure you want to delete all app data? This action cannot be undone.', 'Delete All Data');
+                                            if (confirmed) {
+                                                handleDeleteAllData();
+                                            }
+                                        }}
+                                        className="w-full flex items-center justify-between p-4 rounded-lg border-2 border-red-300 hover:border-red-400 bg-red-100 hover:bg-red-200 transition-all"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <svg className="w-5 h-5 text-red-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                            </svg>
+                                            <div className="text-left">
+                                                <div className="font-medium text-red-800">Delete All Data</div>
+                                                <div className="text-sm text-red-700">Clear all app data and sign out</div>
+                                            </div>
+                                        </div>
+                                        <svg className="w-5 h-5 text-red-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* App Info */}
+                            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                                <h2 className="text-lg font-semibold text-gray-900 mb-4">About</h2>
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                                        <div className="flex items-center gap-3">
+                                            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            <span className="font-medium text-gray-700">App Version</span>
+                                        </div>
+                                        <span className="text-sm font-semibold text-red-700">{appVersion}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+
+                    {/* Delete Profile Confirmation Modal */}
+                    {showDeleteConfirm && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                            <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
+                                <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Profile</h3>
+                                <p className="text-gray-600 mb-6">Are you sure you want to delete your profile? This will remove your account and all associated data. This action cannot be undone.</p>
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setShowDeleteConfirm(false)}
+                                        className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setShowDeleteConfirm(false);
+                                            handleDeleteProfile();
+                                        }}
+                                        className="flex-1 px-4 py-3 bg-red-700 text-white rounded-lg font-semibold hover:bg-red-800 transition-colors"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
         // --- All Classes Screen (Sample Papers) ---
         function AllClassesScreen({ onBackToHome }) {
             const [selectedClass, setSelectedClass] = useState('');
@@ -3667,7 +3954,7 @@
 
         function App() {
             // Initialize view immediately - show login by default, auth check happens in background
-            const [currentView, setCurrentView] = useState(DISABLE_LOGIN_FOR_TESTING ? 'home' : 'login'); // 'login', 'home', 'library', 'profile', 'quiz', 'ai', 'features', 'location', 'notifications', 'allclasses', 'pyq', 'mindmap'
+            const [currentView, setCurrentView] = useState(DISABLE_LOGIN_FOR_TESTING ? 'home' : 'login'); // 'login', 'home', 'library', 'profile', 'quiz', 'ai', 'features', 'location', 'notifications', 'allclasses', 'pyq', 'mindmap', 'settings'
             const [username, setUsername] = useState(DISABLE_LOGIN_FOR_TESTING ? 'Test User' : '');
             const [isCheckingAuth, setIsCheckingAuth] = useState(false); // No loading screen - check in background
 
@@ -3939,6 +4226,10 @@
                 transitionToView('mindmap');
             };
 
+            const handleNavigateToSettings = () => {
+                transitionToView('settings');
+            };
+
             // Wrapper function for smooth view transitions - simplified
             const transitionToView = (newView) => {
                 if (currentView === newView) return; // Avoid unnecessary transitions
@@ -3950,7 +4241,7 @@
                 if (currentView === 'login') {
                     return <LoginPage onLogin={handleLogin} />;
                 } else if (currentView === 'home') {
-                    return <HomePage onNavigateToLibrary={handleNavigateToLibrary} username={username} onLogout={handleLogout} onNavigateToProfile={handleNavigateToProfile} onNavigateToQuiz={handleNavigateToQuiz} onNavigateToAI={handleNavigateToAI} onNavigateToFeatures={handleNavigateToFeatures} onNavigateToLocation={handleNavigateToLocation} onNavigateToNotifications={handleNavigateToNotifications} onNavigateToAllClasses={handleNavigateToAllClasses} onNavigateToPYQ={handleNavigateToPYQ} onNavigateToMindMap={handleNavigateToMindMap} />;
+                    return <HomePage onNavigateToLibrary={handleNavigateToLibrary} username={username} onLogout={handleLogout} onNavigateToProfile={handleNavigateToProfile} onNavigateToQuiz={handleNavigateToQuiz} onNavigateToAI={handleNavigateToAI} onNavigateToFeatures={handleNavigateToFeatures} onNavigateToLocation={handleNavigateToLocation} onNavigateToNotifications={handleNavigateToNotifications} onNavigateToAllClasses={handleNavigateToAllClasses} onNavigateToPYQ={handleNavigateToPYQ} onNavigateToMindMap={handleNavigateToMindMap} onNavigateToSettings={handleNavigateToSettings} />;
                 } else if (currentView === 'library') {
                     return <NCERTLibrary onBackToHome={handleBackToHome} />;
                 } else if (currentView === 'profile') {
@@ -3971,6 +4262,8 @@
                     return <PYQScreen onBackToHome={handleBackToHome} />;
                 } else if (currentView === 'mindmap') {
                     return <AIStudyMindMap onBackToHome={handleBackToHome} />;
+                } else if (currentView === 'settings') {
+                    return <SettingsScreen onBackToHome={handleBackToHome} onLogout={handleLogout} />;
                 }
                 return null;
             };

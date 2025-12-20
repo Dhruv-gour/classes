@@ -149,6 +149,65 @@
             outline-offset: 2px;
         }
 
+        /* Dark Mode Support */
+        .dark-mode {
+            background-color: #111827;
+            color: #f9fafb;
+        }
+
+        .dark-mode .bg-white {
+            background-color: #1f2937;
+        }
+
+        .dark-mode .bg-gray-50 {
+            background-color: #111827;
+        }
+
+        .dark-mode .text-gray-900 {
+            color: #f9fafb;
+        }
+
+        .dark-mode .text-gray-700 {
+            color: #d1d5db;
+        }
+
+        .dark-mode .text-gray-600 {
+            color: #9ca3af;
+        }
+
+        .dark-mode .border-gray-200 {
+            border-color: #374151;
+        }
+
+        .dark-mode .border-gray-100 {
+            border-color: #4b5563;
+        }
+
+        /* Mobile App Feel - Remove website-like elements */
+        body {
+            -webkit-touch-callout: none;
+            overscroll-behavior: none;
+            touch-action: pan-y;
+        }
+
+        #root {
+            min-height: 100vh;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Hide scrollbars but keep functionality */
+        ::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+
+        /* Prevent text selection on mobile for app-like feel */
+        @media (max-width: 768px) {
+            * {
+                -webkit-tap-highlight-color: transparent;
+            }
+        }
+
         /* Simple loading spinner */
         @keyframes spin {
             to { transform: rotate(360deg); }
