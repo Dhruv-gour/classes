@@ -322,6 +322,11 @@
     
     <!-- Tailwind CSS - Load early to prevent FOUC -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
     
     <!-- Critical: Load React production builds (minified for performance) -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>

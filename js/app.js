@@ -1719,13 +1719,16 @@
                                     </div>
 
                                     {/* Banner Indicators */}
-                                    <div className="flex justify-center gap-2 mt-4">
+                                    <div className="flex justify-center gap-1.5 mt-3">
                                         {[0, 1, 2].map((index) => (
                                             <button
                                                 key={index}
                                                 onClick={() => setBannerIndex(index)}
-                                                className={`w-2 h-2 rounded-full transition-all ${bannerIndex === index ? 'bg-red-700' : 'bg-gray-300'
-                                                    }`}
+                                                className={`h-1.5 transition-all duration-300 rounded-full ${bannerIndex === index 
+                                                    ? 'w-6 bg-red-700 dark:bg-red-500' 
+                                                    : 'w-1.5 bg-gray-300 dark:bg-gray-600'
+                                                }`}
+                                                aria-label={`Go to banner ${index + 1}`}
                                             />
                                         ))}
                                     </div>
