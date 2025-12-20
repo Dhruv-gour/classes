@@ -67,20 +67,6 @@
   "description": "Chaturvedi Classes - Learning Platform for 9th to 12th students",
   "prefer_related_applications": false,
   "related_applications": [],
-  "shortcuts": [
-    {
-      "name": "Home",
-      "short_name": "Home",
-      "description": "Go to home page",
-      "url": "/",
-      "icons": [
-        {
-          "src": "img/logo.png",
-          "sizes": "192x192"
-        }
-      ]
-    }
-  ],
   "screenshots": [],
   "iarc_rating_id": "",
   "share_target": {
