@@ -3,7 +3,50 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+
+    <!-- Force Mobile Layout on Desktop -->
+    <style>
+        /* Only apply on screens wider than a typical large mobile device */
+        @media screen and (min-width: 768px) {
+            body {
+                background-color: #111 !important;
+                /* Dark background for the 'letterbox' */
+                display: flex !important;
+                justify-content: center !important;
+                align-items: center !important;
+                min-height: 100vh !important;
+                margin: 0 !important;
+            }
+
+            #root {
+                width: 100% !important;
+                max-width: 480px !important;
+                /* Mobile width */
+                height: 100vh !important;
+                /* Full height */
+                max-height: 100vh !important;
+                background-color: #fff;
+                /* Ensure app has a background */
+                position: relative !important;
+                box-shadow: 0 0 50px rgba(0, 0, 0, 0.5) !important;
+                overflow: hidden !important;
+                /* Prevent scroll on the constrained root */
+            }
+
+            /* Ensure modals/fixed elements stay within the mobile frame */
+            .fixed {
+                position: absolute !important;
+                /* Changes fixed to absolute relative to #root */
+            }
+
+            /* Exception: If your toasts/modals use portals attached to body, they might need specific handling. 
+               However, 'absolute' usually works if they are inside #root. 
+               If they are direct children of body, we might need to constrain them too. 
+            */
+        }
+    </style>
     <meta name="screen-orientation" content="portrait">
     <meta name="orientation" content="portrait">
     <meta name="theme-color" content="#b91c1c">
@@ -12,15 +55,17 @@
     <meta name="apple-mobile-web-app-title" content="Chaturvedi Classes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
-    
+
     <!-- SEO Meta Tags -->
     <title>Chaturvedi Classes - Learning Platform for 9th to 12th Students</title>
-    <meta name="description" content="Chaturvedi Classes - Excellence in Education. Learning platform for 9th to 12th students with comprehensive study materials, NCERT books, quizzes, and AI-powered features.">
-    <meta name="keywords" content="Chaturvedi Classes, education, learning platform, NCERT, 9th class, 10th class, 11th class, 12th class, online classes, study materials">
+    <meta name="description"
+        content="Chaturvedi Classes - Excellence in Education. Learning platform for 9th to 12th students with comprehensive study materials, NCERT books, quizzes, and AI-powered features.">
+    <meta name="keywords"
+        content="Chaturvedi Classes, education, learning platform, NCERT, 9th class, 10th class, 11th class, 12th class, online classes, study materials">
     <meta name="author" content="Chaturvedi Classes">
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
     <link rel="canonical" href="https://chaturvediclasses.com/">
-    
+
 
     <!-- Resource Hints for Performance -->
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
@@ -39,61 +84,176 @@
     <link rel="preload" href="https://unpkg.com/react@18/umd/react.production.min.js" as="script" crossorigin>
     <link rel="preload" href="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" as="script" crossorigin>
     <link rel="preload" href="https://unpkg.com/@babel/standalone/babel.min.js" as="script" crossorigin>
-    
+
     <!-- Google Fonts - Preload and use font-display swap -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
+
+    <!-- Theme Initialization Script (Prevents Flash) -->
+    <script>
+        (function () {
+            try {
+                const storedTheme = localStorage.getItem('theme');
+                const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+
+                // If it's the very first time (no stored theme), set it based on system
+                if (!storedTheme) {
+                    localStorage.setItem('theme', systemTheme);
+                }
+
+                const themeToApply = storedTheme || systemTheme;
+
+                if (themeToApply === 'dark') {
+                    document.documentElement.classList.add('dark');
+                    document.body.classList.add('dark-mode');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    document.body.classList.remove('dark-mode');
+                }
+            } catch (e) {
+                console.error('Theme initialization error:', e);
+            }
+        })();
+    </script>
+
     <!-- Inline critical Tailwind utilities to prevent FOUC -->
     <style>
         /* Critical Tailwind utilities - inline to prevent FOUC */
-        body{margin:0;font-family:Inter,sans-serif}
-        .min-h-screen{min-height:100vh}
-        .flex{display:flex}
-        .items-center{align-items:center}
-        .justify-center{justify-content:center}
-        .bg-gradient-to-br{background-image:linear-gradient(to bottom right,var(--tw-gradient-stops))}
-        .from-gray-50{--tw-gradient-from:#f9fafb;--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to,rgba(249,250,251,0))}
-        .via-red-50{--tw-gradient-stops:var(--tw-gradient-from),#fef2f2,var(--tw-gradient-to,rgba(254,242,242,0))}
-        .to-yellow-50{--tw-gradient-to:#fefce8}
-        .px-4{padding-left:1rem;padding-right:1rem}
-        .py-8{padding-top:2rem;padding-bottom:2rem}
-        .w-full{width:100%}
-        .max-w-md{max-width:28rem}
-        .text-center{text-align:center}
-        .mb-8{margin-bottom:2rem}
-        .w-24{width:6rem}
-        .h-24{height:6rem}
-        .rounded-full{border-radius:9999px}
-        .bg-white{background-color:#fff}
-        .shadow-lg{box-shadow:0 10px 15px -3px rgba(0,0,0,0.1),0 4px 6px -4px rgba(0,0,0,0.1)}
-        .p-1{padding:0.25rem}
-        .object-contain{object-fit:contain}
-        .text-3xl{font-size:1.875rem;line-height:2.25rem}
-        .font-bold{font-weight:700}
-        .text-red-900{color:#7f1d1d}
-        .text-yellow-600{color:#ca8a04}
-        .mb-2{margin-bottom:0.5rem}
-        
+        body {
+            margin: 0;
+            font-family: Inter, sans-serif
+        }
+
+        .min-h-screen {
+            min-height: 100vh
+        }
+
+        .flex {
+            display: flex
+        }
+
+        .items-center {
+            align-items: center
+        }
+
+        .justify-center {
+            justify-content: center
+        }
+
+        .bg-gradient-to-br {
+            background-image: linear-gradient(to bottom right, var(--tw-gradient-stops))
+        }
+
+        .from-gray-50 {
+            --tw-gradient-from: #f9fafb;
+            --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(249, 250, 251, 0))
+        }
+
+        .via-red-50 {
+            --tw-gradient-stops: var(--tw-gradient-from), #fef2f2, var(--tw-gradient-to, rgba(254, 242, 242, 0))
+        }
+
+        .to-yellow-50 {
+            --tw-gradient-to: #fefce8
+        }
+
+        .px-4 {
+            padding-left: 1rem;
+            padding-right: 1rem
+        }
+
+        .py-8 {
+            padding-top: 2rem;
+            padding-bottom: 2rem
+        }
+
+        .w-full {
+            width: 100%
+        }
+
+        .max-w-md {
+            max-width: 28rem
+        }
+
+        .text-center {
+            text-align: center
+        }
+
+        .mb-8 {
+            margin-bottom: 2rem
+        }
+
+        .w-24 {
+            width: 6rem
+        }
+
+        .h-24 {
+            height: 6rem
+        }
+
+        .rounded-full {
+            border-radius: 9999px
+        }
+
+        .bg-white {
+            background-color: #fff
+        }
+
+        .shadow-lg {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)
+        }
+
+        .p-1 {
+            padding: 0.25rem
+        }
+
+        .object-contain {
+            object-fit: contain
+        }
+
+        .text-3xl {
+            font-size: 1.875rem;
+            line-height: 2.25rem
+        }
+
+        .font-bold {
+            font-weight: 700
+        }
+
+        .text-red-900 {
+            color: #7f1d1d
+        }
+
+        .text-yellow-600 {
+            color: #ca8a04
+        }
+
+        .mb-2 {
+            margin-bottom: 0.5rem
+        }
+
         /* Custom styles */
         body {
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
+
         ::-webkit-scrollbar {
             display: none;
         }
+
         .scrollbar-hide {
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
-        
+
         /* Smooth screen transition animations - simplified for better performance */
         @keyframes fadeIn {
             from {
                 opacity: 0;
             }
+
             to {
                 opacity: 1;
             }
@@ -107,13 +267,19 @@
         }
 
         /* Smooth transitions for interactive elements - reduced complexity */
-        button, a, input, select, textarea {
+        button,
+        a,
+        input,
+        select,
+        textarea {
             transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
         }
 
         /* Premium Mobile UI Enhancements */
         /* Ensure minimum touch target size (44x44px) for better mobile UX */
-        button, a[role="button"], .touch-target {
+        button,
+        a[role="button"],
+        .touch-target {
             min-height: 44px;
             min-width: 44px;
             touch-action: manipulation;
@@ -121,7 +287,8 @@
         }
 
         /* Improved button feedback for mobile */
-        button:active, a:active {
+        button:active,
+        a:active {
             transform: scale(0.98);
         }
 
@@ -131,7 +298,7 @@
                 padding-left: 1rem;
                 padding-right: 1rem;
             }
-            
+
             /* Improved card shadows for depth */
             .card-shadow {
                 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
@@ -144,7 +311,9 @@
         }
 
         /* Better focus states for accessibility */
-        button:focus-visible, a:focus-visible, input:focus-visible {
+        button:focus-visible,
+        a:focus-visible,
+        input:focus-visible {
             outline: 2px solid #dc2626;
             outline-offset: 2px;
         }
@@ -173,6 +342,10 @@
 
         .dark-mode .text-gray-600 {
             color: #9ca3af;
+        }
+
+        .dark-mode .text-gray-500 {
+            color: #6b7280;
         }
 
         .dark-mode .border-gray-200 {
@@ -235,6 +408,49 @@
             background-color: rgba(127, 29, 29, 0.4);
         }
 
+        /* Toast and Modal Dark Mode */
+        .dark-mode .toast {
+            background: #1f2937;
+            color: #f9fafb;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+        }
+
+        .dark-mode .toast-content {
+            color: #f3f4f6;
+        }
+
+        .dark-mode .toast-close:hover {
+            background: #374151;
+            color: #f9fafb;
+        }
+
+        .dark-mode .notif-modal {
+            background: #1f2937;
+            color: #f9fafb;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .dark-mode .notif-modal-title {
+            color: #f9fafb;
+        }
+
+        .dark-mode .notif-modal-message {
+            color: #9ca3af;
+        }
+
+        .dark-mode .notif-modal-icon {
+            background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%);
+        }
+
+        .dark-mode .notif-modal-btn-cancel {
+            background: #374151;
+            color: #d1d5db;
+        }
+
+        .dark-mode .notif-modal-btn-cancel:hover {
+            background: #4b5563;
+        }
+
         /* Fix scrolling - only enable where needed for mobile app feel */
         html {
             height: 100%;
@@ -269,7 +485,7 @@
         .h-screen:not(.overflow-y-auto):not(.home-main-content) {
             overflow: hidden;
         }
-        
+
         /* Ensure drawer can scroll */
         div[style*="overflowY"] {
             overflow-y: auto !important;
@@ -298,8 +514,11 @@
 
         /* Simple loading spinner */
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
+
         .animate-spin {
             animation: spin 0.8s linear infinite;
         }
@@ -309,17 +528,21 @@
             .view-transition {
                 animation: none;
             }
-            
-            button, a, input, select, textarea {
+
+            button,
+            a,
+            input,
+            select,
+            textarea {
                 transition: none;
             }
-            
+
             .animate-spin {
                 animation: none;
             }
         }
     </style>
-    
+
     <!-- Tailwind CSS - Load early to prevent FOUC -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -327,7 +550,7 @@
             darkMode: 'class'
         }
     </script>
-    
+
     <!-- Critical: Load React production builds (minified for performance) -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
@@ -361,7 +584,7 @@
             width: 100%;
             pointer-events: none;
         }
-        
+
         @media (min-width: 640px) {
             .toast-container {
                 left: auto;
@@ -386,7 +609,7 @@
             min-width: 0;
             width: 100%;
         }
-        
+
         @media (min-width: 640px) {
             .toast {
                 animation: slideInRight 0.3s ease-out;
@@ -449,17 +672,19 @@
                 transform: translateX(100%);
                 opacity: 0;
             }
+
             to {
                 transform: translateX(0);
                 opacity: 1;
             }
         }
-        
+
         @keyframes slideInDown {
             from {
                 transform: translateY(-100%) translateX(-50%);
                 opacity: 0;
             }
+
             to {
                 transform: translateY(0) translateX(-50%);
                 opacity: 1;
@@ -494,7 +719,7 @@
             animation: scaleIn 0.2s ease-out;
             text-align: center;
         }
-        
+
         @media (min-width: 640px) {
             .notif-modal {
                 padding: 28px;
@@ -570,8 +795,13 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
 
         @keyframes scaleIn {
@@ -579,6 +809,7 @@
                 transform: scale(0.95);
                 opacity: 0;
             }
+
             to {
                 transform: scale(1);
                 opacity: 1;
@@ -589,11 +820,20 @@
     <!-- App Configuration and Logic - Deferred -->
     <script src="js/config.js" defer></script>
     <script src="js/utils.js" defer></script>
-    
+
+    <!-- Theme System (Must be loaded before app.js) -->
+    <script src="js/theme_system.js"></script>
+
+    <!-- Quiz Questions Data -->
+    <script src="js/questions.js"></script>
+
+    <!-- App Logic -->
+    <script type="text/babel" src="js/app.js" defer></script>
+
     <!-- Custom UI Components Script -->
     <script>
         // Custom Toast Notification System
-        window.showToast = function(message, type = 'info') {
+        window.showToast = function (message, type = 'info') {
             let container = document.getElementById('toast-container');
             if (!container) {
                 container = document.createElement('div');
@@ -604,7 +844,7 @@
 
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
-            
+
             const icons = {
                 success: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>',
                 error: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>',
@@ -639,7 +879,7 @@
         };
 
         // Custom Notification Permission Modal
-        window.showNotificationPermissionModal = function() {
+        window.showNotificationPermissionModal = function () {
             return new Promise((resolve) => {
                 const overlay = document.createElement('div');
                 overlay.className = 'notif-modal-overlay';
@@ -681,19 +921,22 @@
             });
         };
     </script>
-    
+
     <script type="text/babel" src="js/app.js" defer></script>
 </head>
 
 <body class="bg-gray-50 text-gray-900 select-none" oncontextmenu="return false;">
     <div id="root" role="main" aria-label="Chaturvedi Classes Application">
         <!-- Static Loading State - improved UI -->
-        <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-red-50 to-yellow-50 px-4 py-8">
+        <div
+            class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-red-50 to-yellow-50 px-4 py-8">
             <div class="w-full max-w-md text-center">
                 <!-- Logo and Title Section -->
                 <div class="flex justify-center mb-6">
-                    <div class="w-20 h-20 flex items-center justify-center overflow-hidden bg-white rounded-full shadow-lg p-1.5">
-                        <img src="img/logo.png" alt="Chaturvedi Classes Logo" class="w-full h-full object-contain" width="80" height="80" loading="eager" fetchpriority="high" />
+                    <div
+                        class="w-20 h-20 flex items-center justify-center overflow-hidden bg-white rounded-full shadow-lg p-1.5">
+                        <img src="img/logo.png" alt="Chaturvedi Classes Logo" class="w-full h-full object-contain"
+                            width="80" height="80" loading="eager" fetchpriority="high" />
                     </div>
                 </div>
                 <h1 class="text-2xl md:text-3xl font-bold text-red-900 mb-1">
@@ -707,22 +950,22 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Service Worker Registration - Deferred to end for better performance -->
     <script>
         // Register service worker after everything else loads
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
+            window.addEventListener('load', function () {
                 // Use requestIdleCallback if available, otherwise setTimeout
-                const registerSW = function() {
+                const registerSW = function () {
                     navigator.serviceWorker.register('sw.js', { scope: '/' })
-                        .then(function(registration) {
+                        .then(function (registration) {
                             console.log('Service Worker registered successfully:', registration.scope);
-                            
+
                             // Check for updates
-                            registration.addEventListener('updatefound', function() {
+                            registration.addEventListener('updatefound', function () {
                                 const newWorker = registration.installing;
-                                newWorker.addEventListener('statechange', function() {
+                                newWorker.addEventListener('statechange', function () {
                                     if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                                         console.log('New service worker available');
                                         // Don't auto-reload, let user continue using the app
@@ -730,20 +973,20 @@
                                 });
                             });
                         })
-                        .catch(function(error) {
+                        .catch(function (error) {
                             console.log('Service Worker registration failed:', error);
                         });
                 };
-                
+
                 if ('requestIdleCallback' in window) {
                     requestIdleCallback(registerSW, { timeout: 2000 });
                 } else {
                     setTimeout(registerSW, 2000);
                 }
-                
+
                 // Handle service worker updates
                 let refreshing = false;
-                navigator.serviceWorker.addEventListener('controllerchange', function() {
+                navigator.serviceWorker.addEventListener('controllerchange', function () {
                     if (!refreshing) {
                         refreshing = true;
                         window.location.reload();

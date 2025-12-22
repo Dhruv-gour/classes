@@ -34,6 +34,115 @@
 
         const { Download, ExternalLink, ChevronRight, ChevronLeft, Library, Search, Book, GraduationCap, ArrowLeft, Menu, Lock, User, Eye, EyeOff, LogOut, Edit, Phone, MapPin, FileText, Grid, Star, Share2, Bell, Bot, Sparkles, Network, Shield, BadgeCheck } = Icons;
 
+        // --- Global Theme System ---
+        const THEME = {
+            // Backgrounds
+            background: "bg-gray-50 dark:bg-gray-900",
+            surface: "bg-white dark:bg-gray-800",
+            surfaceHighlight: "bg-gray-100 dark:bg-gray-700",
+            
+            // Text
+            textPrimary: "text-gray-900 dark:text-gray-100",
+            textSecondary: "text-gray-600 dark:text-gray-400",
+            textMuted: "text-gray-500 dark:text-gray-500",
+            textInvert: "text-white", // Always white (e.g., on red buttons)
+
+            // Borders
+            border: "border-gray-200 dark:border-gray-700",
+            borderHighlight: "border-gray-300 dark:border-gray-600",
+            divider: "divide-gray-200 dark:divide-gray-700",
+            
+            // Brand / Primary
+            brandPrimary: "text-red-900 dark:text-red-400",
+            brandSecondary: "text-yellow-600 dark:text-yellow-500",
+            primaryBg: "bg-red-700 hover:bg-red-800", // Buttons
+            primaryText: "text-red-700 dark:text-red-400", // Links, icons
+            
+            // Indicators
+            indicatorActive: "bg-red-600 dark:bg-red-500",
+            indicatorInactive: "bg-gray-300 dark:bg-gray-600",
+            indicatorSuccess: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-400 dark:border-green-600",
+            indicatorError: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-400 dark:border-red-600",
+            
+            // Inputs
+            inputBg: "bg-white dark:bg-gray-900",
+            inputBorder: "border-gray-200 dark:border-gray-700",
+            inputText: "text-gray-900 dark:text-gray-100",
+            inputPlaceholder: "placeholder-gray-400",
+
+            // Complex / Specific
+            welcomeCardBg: "bg-gradient-to-r from-red-50 to-yellow-50 dark:from-gray-800 dark:to-gray-700",
+            actionHoverText: "hover:text-red-700 dark:hover:text-red-400",
+            actionHoverBg: "hover:bg-yellow-50 dark:hover:bg-gray-700",
+            actionHoverBorder: "hover:border-red-300 dark:hover:border-red-500",
+            iconMuted: "text-gray-400 dark:text-gray-500",
+            iconHover: "group-hover:text-red-700 dark:group-hover:text-red-400",
+            drawerBg: "bg-white dark:bg-gray-800",
+            backdrop: "bg-black/50",
+            navItemText: "text-gray-700 dark:text-gray-200",
+            navItemActiveBg: "bg-red-50 dark:bg-red-900/20",
+            pageGradient: "bg-gradient-to-br from-gray-50 via-red-50 to-yellow-50 dark:from-gray-900 dark:via-red-900/10 dark:to-yellow-900/10",
+        };
+
+        const ThemeContext = React.createContext();
+
+        const ThemeProvider = ({ children }) => {
+            const [theme, setTheme] = useState('light');
+            const [isLoaded, setIsLoaded] = useState(false);
+
+            useEffect(() => {
+                // 1. Load from storage
+                const storedTheme = localStorage.getItem('theme');
+                
+                if (storedTheme) {
+                    setTheme(storedTheme);
+                } else {
+                    // 2. Fallback to system preference
+                    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    const defaultTheme = systemPrefersDark ? 'dark' : 'light';
+                    setTheme(defaultTheme);
+                    localStorage.setItem('theme', defaultTheme);
+                }
+                setIsLoaded(true);
+            }, []);
+
+            useEffect(() => {
+                // Apply theme class to html element
+                const root = document.documentElement;
+                if (theme === 'dark') {
+                    root.classList.add('dark');
+                    document.body.classList.add('dark-mode');
+                } else {
+                    root.classList.remove('dark');
+                    document.body.classList.remove('dark-mode');
+                }
+                localStorage.setItem('theme', theme);
+            }, [theme]);
+
+            const toggleTheme = () => {
+                setTheme(prev => prev === 'light' ? 'dark' : 'light');
+            };
+
+            const setMode = (mode) => {
+                setTheme(mode);
+            };
+
+            // Return children even if not loaded to avoid blocking, the script in index.html handles initial flash
+            return (
+                <ThemeContext.Provider value={{ theme, toggleTheme, setMode, classes: THEME }}>
+                    {children}
+                </ThemeContext.Provider>
+            );
+        };
+
+        const useTheme = () => {
+            const context = React.useContext(ThemeContext);
+            if (!context) {
+                throw new Error('useTheme must be used within a ThemeProvider');
+            }
+            return context;
+        };
+
         // --- Data Configuration (Moved outside component for clarity, but remains in the HTML file) ---
         const NCERT_DATA = {
             9: [
@@ -188,6 +297,7 @@
 
         // --- Login Page Component ---
         function LoginPage({ onLogin }) {
+            const { classes } = useTheme();
             const [error, setError] = useState("");
             const [isLoading, setIsLoading] = useState(false);
             const [otpEmail, setOtpEmail] = useState("");
@@ -528,27 +638,27 @@
             };
 
             return (
-                <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-red-50 to-yellow-50 px-4 py-8">
+                <div className={`h-screen overflow-hidden flex items-center justify-center ${classes.pageGradient} px-4 py-8 overflow-y-auto`}>
                     <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-8 duration-500">
                         {/* Logo and Title Section */}
                         <div className="text-center mb-8">
                             <div className="flex justify-center mb-6">
-                                <div className="w-24 h-24 flex items-center justify-center overflow-hidden bg-white rounded-full shadow-lg p-1">
+                                <div className={`w-24 h-24 flex items-center justify-center overflow-hidden ${classes.surface} rounded-full shadow-lg p-1`}>
                                     <img src="img/logo.png" alt="Chaturvedi Classes Logo" className="w-full h-full object-contain" />
                                 </div>
                             </div>
-                            <h1 className="text-3xl md:text-4xl font-bold text-red-900 mb-2">
-                                Chaturvedi <span className="text-yellow-600">Classes</span>
+                            <h1 className={`text-3xl md:text-4xl font-bold ${classes.brandPrimary} mb-2`}>
+                                Chaturvedi <span className={classes.brandSecondary}>Classes</span>
                             </h1>
-                            <p className="text-sm text-gray-600 font-semibold tracking-wider uppercase">Excellence in Education</p>
+                            <p className={`text-sm ${classes.textSecondary} font-semibold tracking-wider uppercase`}>Excellence in Education</p>
                         </div>
 
                         {/* Login Card */}
-                        <div className="bg-white rounded-3xl border border-gray-200 shadow-2xl p-8 md:p-10">
+                        <div className={`${classes.surface} rounded-3xl ${classes.border} border shadow-2xl p-8 md:p-10`}>
                             {/* Welcome Message */}
                             <div className="text-center mb-8">
-                                <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back!</h2>
-                                <p className="text-gray-600 text-sm">Sign in to continue your learning journey</p>
+                                <h2 className={`text-2xl font-bold ${classes.textPrimary} mb-2`}>Welcome Back!</h2>
+                                <p className={`${classes.textSecondary} text-sm`}>Sign in to continue your learning journey</p>
                             </div>
 
                             {/* Error Message */}
@@ -558,8 +668,8 @@
                                     aria-live="polite"
                                     aria-atomic="true"
                                     className={`px-4 py-3 rounded-xl text-sm mb-6 border ${otpMessage.type === 'success'
-                                        ? 'bg-green-50 border-green-200 text-green-700'
-                                        : 'bg-red-50 border-red-200 text-red-700'
+                                        ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400'
+                                        : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400'
                                         }`}
                                 >
                                     {error || otpMessage.text}
@@ -569,7 +679,7 @@
                             {/* Email OTP Login Section */}
                             <div className="space-y-4 mb-6">
                                 <div>
-                                    <label htmlFor="emailInput" className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 ml-1">Email Address</label>
+                                    <label htmlFor="emailInput" className={`block text-xs font-bold ${classes.textMuted} uppercase tracking-wider mb-1 ml-1`}>Email Address</label>
                                     <div className="relative">
                                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                             <svg className="h-5 w-5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
@@ -581,7 +691,7 @@
                                             placeholder="name@example.com"
                                             value={otpEmail}
                                             onChange={(e) => setOtpEmail(e.target.value)}
-                                            className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none transition-all duration-200 bg-gray-50 focus:bg-white text-gray-900 placeholder-gray-400 disabled:opacity-60 disabled:cursor-not-allowed"
+                                            className={`w-full pl-10 pr-4 py-3 rounded-xl border ${classes.border} focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none transition-all duration-200 ${classes.inputBg} focus:${classes.surface} ${classes.textPrimary} ${classes.inputPlaceholder} disabled:opacity-60 disabled:cursor-not-allowed`}
                                             aria-label="Email address"
                                             aria-required="true"
                                             aria-invalid={error ? "true" : "false"}
@@ -618,7 +728,7 @@
                                 {showOtpInput && (
                                     <div className="pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
                                         <div className="flex items-center justify-between mb-1">
-                                            <label htmlFor="otpInput" className="block text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">One-Time Password</label>
+                                            <label htmlFor="otpInput" className={`block text-xs font-bold ${classes.textMuted} uppercase tracking-wider ml-1`}>One-Time Password</label>
                                             <button
                                                 type="button"
                                                 onClick={() => {
@@ -627,7 +737,7 @@
                                                     setOtpMessage({ type: '', text: '' });
                                                     clearOtpState();
                                                 }}
-                                                className="text-xs text-gray-500 hover:text-red-600 font-medium underline focus:outline-none focus:ring-2 focus:ring-red-200 rounded px-1"
+                                                className={`text-xs ${classes.textMuted} hover:${classes.primaryText} font-medium underline focus:outline-none focus:ring-2 focus:ring-red-200 rounded px-1`}
                                                 aria-label="Change email address"
                                             >
                                                 Change Email
@@ -652,7 +762,7 @@
                                                         setOtpCode(val);
                                                     }
                                                 }}
-                                                className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 outline-none transition-all duration-200 bg-gray-50 focus:bg-white text-gray-900 placeholder-gray-400 tracking-widest"
+                                                className={`w-full pl-10 pr-4 py-3 rounded-xl border ${classes.border} focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 outline-none transition-all duration-200 ${classes.inputBg} focus:${classes.surface} ${classes.textPrimary} ${classes.inputPlaceholder} tracking-widest`}
                                                 aria-label="One-time password"
                                                 aria-required="true"
                                                 aria-invalid={error ? "true" : "false"}
@@ -667,7 +777,7 @@
                                             type="button"
                                             onClick={handleVerifyOtp}
                                             disabled={isLoading || !otpCode || otpCode.length !== 6}
-                                            className="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold py-3 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className={`w-full bg-gray-900 dark:bg-black hover:bg-gray-800 dark:hover:bg-gray-900 text-white font-semibold py-3 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed`}
                                             aria-label="Verify OTP and login"
                                             aria-busy={isLoading}
                                         >
@@ -685,28 +795,28 @@
                             {/* Divider */}
                             <div className="relative my-6">
                                 <div className="absolute inset-0 flex items-center">
-                                    <div className="w-full border-t border-gray-300"></div>
+                                    <div className={`w-full border-t ${classes.border}`}></div>
                                 </div>
                                 <div className="relative flex justify-center text-sm">
-                                    <span className="px-4 bg-white text-gray-500">Quick & Secure</span>
+                                    <span className={`px-4 ${classes.surface} ${classes.textMuted}`}>Quick & Secure</span>
                                 </div>
                             </div>
 
                             {/* Info Section */}
                             <div className="mt-6 space-y-3">
-                                <div className="flex items-start gap-3 text-sm text-gray-600">
+                                <div className={`flex items-start gap-3 text-sm ${classes.textSecondary}`}>
                                     <svg className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                     <span>No password required</span>
                                 </div>
-                                <div className="flex items-start gap-3 text-sm text-gray-600">
+                                <div className={`flex items-start gap-3 text-sm ${classes.textSecondary}`}>
                                     <svg className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                     </svg>
                                     <span>Secure authentication</span>
                                 </div>
-                                <div className="flex items-start gap-3 text-sm text-gray-600">
+                                <div className={`flex items-start gap-3 text-sm ${classes.textSecondary}`}>
                                     <svg className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                                     </svg>
@@ -721,6 +831,7 @@
 
         // --- Profile Edit Page Component ---
         function ProfileEditPage({ onBackToHome, username, onUsernameUpdate }) {
+            const { classes } = useTheme();
             const [displayName, setDisplayName] = useState(username || '');
             const [selectedClass, setSelectedClass] = useState('');
             const [email, setEmail] = useState('');
@@ -916,9 +1027,9 @@
             };
 
             return (
-                <div className="min-h-screen flex flex-col font-sans bg-gray-50 text-gray-900">
+                <div className={`h-screen overflow-hidden flex flex-col font-sans ${classes.background} ${classes.textPrimary}`}>
                     {/* Header */}
-                    <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+                    <header className={`${classes.surface} ${classes.border} border-b sticky top-0 z-20 shadow-sm flex-none`}>
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                             <div className="flex justify-between items-center h-16">
                                 <div className="flex items-center gap-3 select-none">
@@ -926,8 +1037,8 @@
                                         <img src="img/logo.png" alt="Chaturvedi Classes Logo" className="w-full h-full object-contain" />
                                     </div>
                                     <div>
-                                        <h1 className="text-lg md:text-xl font-bold text-red-900 leading-tight">Chaturvedi <span className="text-yellow-600">Classes</span></h1>
-                                        <p className="text-[10px] md:text-xs text-gray-500 font-semibold tracking-wider">EXCELLENCE IN EDUCATION</p>
+                                        <h1 className={`text-lg md:text-xl font-bold ${classes.brandPrimary} leading-tight`}>Chaturvedi <span className={classes.brandSecondary}>Classes</span></h1>
+                                        <p className={`text-[10px] md:text-xs ${classes.textMuted} font-semibold tracking-wider`}>EXCELLENCE IN EDUCATION</p>
                                     </div>
                                 </div>
 
@@ -939,7 +1050,7 @@
                                         }
                                         onBackToHome();
                                     }}
-                                    className="p-2 text-gray-600 hover:text-red-700 transition-colors rounded-lg hover:bg-gray-100"
+                                    className={`p-2 ${classes.textSecondary} ${classes.actionHoverText} transition-colors rounded-lg ${classes.actionHoverBg}`}
                                 >
                                     <ArrowLeft className="w-6 h-6" />
                                 </button>
@@ -948,10 +1059,10 @@
                     </header>
 
                     {/* Main Content */}
-                    <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+                    <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 overflow-y-auto">
                         <div className="animate-in fade-in slide-in-from-bottom-8 duration-500">
-                            <div className="bg-white rounded-2xl border border-gray-200 shadow-xl p-6 md:p-8">
-                                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">Edit Profile</h2>
+                            <div className={`${classes.surface} rounded-2xl ${classes.border} border shadow-xl p-6 md:p-8`}>
+                                <h2 className={`text-2xl md:text-3xl font-bold ${classes.textPrimary} mb-6`}>Edit Profile</h2>
 
                                 {/* Message */}
                                 {message.text && (
@@ -966,7 +1077,7 @@
                                 <div className="space-y-6">
                                     {/* Name Field */}
                                     <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        <label className={`block text-sm font-semibold ${classes.textSecondary} mb-2`}>
                                             Name <span className="text-red-500">*</span>
                                         </label>
                                         <div className="relative">
@@ -975,7 +1086,7 @@
                                                 type="text"
                                                 value={displayName}
                                                 onChange={(e) => setDisplayName(e.target.value)}
-                                                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all"
+                                                className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 dark:bg-gray-900 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all"
                                                 placeholder="Enter your name"
                                             />
                                         </div>
@@ -983,13 +1094,13 @@
 
                                     {/* Class Selection */}
                                     <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        <label className={`block text-sm font-semibold ${classes.textSecondary} mb-2`}>
                                             Class <span className="text-red-500">*</span>
                                         </label>
                                         <select
                                             value={selectedClass}
                                             onChange={(e) => setSelectedClass(e.target.value)}
-                                            className="w-full pl-4 pr-4 py-3 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all"
+                                            className={`w-full pl-4 pr-4 py-3 border ${classes.border} ${classes.inputBg} rounded-xl ${classes.textPrimary} focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all`}
                                         >
                                             <option value="">Select your class</option>
                                             <option value="9">Class 9th</option>
@@ -1001,7 +1112,7 @@
 
                                     {/* Email Field (Read-only) */}
                                     <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        <label className={`block text-sm font-semibold ${classes.textSecondary} mb-2`}>
                                             Email
                                         </label>
                                         <div className="relative">
@@ -1012,20 +1123,20 @@
                                                 type="email"
                                                 value={email}
                                                 readOnly
-                                                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-gray-500 bg-gray-50 cursor-not-allowed"
+                                                className={`w-full pl-10 pr-4 py-3 border ${classes.border} rounded-xl ${classes.textMuted} ${classes.surfaceHighlight} cursor-not-allowed`}
                                                 placeholder="Email address"
                                             />
                                         </div>
-                                        <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                                        <p className={`text-xs ${classes.textMuted} mt-1`}>Email cannot be changed</p>
                                     </div>
 
                                     {/* Phone Field (Display only) */}
                                     <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        <label className={`block text-sm font-semibold ${classes.textSecondary} mb-2`}>
                                             Phone Number
                                         </label>
                                         <div className="relative">
-                                            <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                                            <Phone className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${classes.iconMuted} w-5 h-5`} />
                                             <input
                                                 type="tel"
                                                 value={phone}
@@ -1036,13 +1147,13 @@
                                                         setPhone(val);
                                                     }
                                                 }}
-                                                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all"
+                                                className={`w-full pl-10 pr-4 py-3 border ${classes.border} ${classes.inputBg} rounded-xl ${classes.textPrimary} ${classes.inputPlaceholder} focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all`}
                                                 placeholder="Enter 10-digit mobile number"
                                                 maxLength={10}
                                                 inputMode="numeric"
                                             />
                                         </div>
-                                        <p className="text-xs text-gray-500 mt-1">Update your contact number</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Update your contact number</p>
                                     </div>
 
                                     {/* Save Button */}
@@ -1084,6 +1195,7 @@
 
         // --- Home Page Component ---
         function HomePage({ onNavigateToLibrary, username, onLogout, onNavigateToProfile, onNavigateToQuiz, onNavigateToAI, onNavigateToFeatures, onNavigateToLocation, onNavigateToNotifications, onNavigateToAllClasses, onNavigateToPYQ, onNavigateToMindMap, onNavigateToSettings }) {
+            const { classes } = useTheme();
             const [isNavOpen, setIsNavOpen] = useState(false);
             const [profilePicture, setProfilePicture] = useState(localStorage.getItem('profilePicture') || '');
             const [bannerIndex, setBannerIndex] = useState(0);
@@ -1340,8 +1452,16 @@
                     const diffX = currentX - swipeStartX;
                     const diffY = currentY - swipeStartY;
                     
-                    // Only trigger if horizontal swipe is greater than vertical (to avoid conflicts with scrolling)
-                    if (Math.abs(diffX) > Math.abs(diffY) && diffX > 50 && !isNavOpen) {
+                    // GESTURE CONTROL:
+                    // 1. Priority to horizontal scrolling (banners/carousels) - strictly force edge swipe
+                    // 2. Only allow swipe from Right Edge (last 30px) to open Right Drawer
+                    // 3. Direction must be Right-to-Left (diffX < 0)
+                    
+                    const isHorizontal = Math.abs(diffX) > Math.abs(diffY);
+                    const isRightToLeft = diffX < -50; // Threshold of 50px
+                    const isEdgeSwipe = swipeStartX > (window.innerWidth - 30); // Only trigger if started from right edge
+                    
+                    if (!isNavOpen && isHorizontal && isRightToLeft && isEdgeSwipe) {
                         setIsNavOpen(true);
                         setSwipeStartX(null);
                         setSwipeStartY(null);
@@ -1368,9 +1488,9 @@
             }, [isNavOpen, swipeStartX, swipeStartY]);
 
             return (
-                <div className="h-screen flex flex-col font-sans bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-hidden">
+                <div className={`h-screen flex flex-col font-sans ${classes.background} ${classes.textPrimary} overflow-hidden`}>
                     {/* Header */}
-                    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-20 shadow-sm flex-shrink-0">
+                    <header className={`${classes.surface} ${classes.border} border-b sticky top-0 z-20 shadow-sm flex-shrink-0`}>
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                             <div className="flex justify-between items-center h-16">
                                 <div className="flex items-center gap-3 select-none">
@@ -1378,15 +1498,15 @@
                                         <img src="img/logo.png" alt="Chaturvedi Classes Logo" className="w-full h-full object-contain" />
                                     </div>
                                     <div>
-                                        <h1 className="text-lg md:text-xl font-bold text-red-900 dark:text-red-400 leading-tight">Chaturvedi <span className="text-yellow-600 dark:text-yellow-500">Classes</span></h1>
-                                        <p className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-semibold tracking-wider">EXCELLENCE IN EDUCATION</p>
+                                        <h1 className={`text-lg md:text-xl font-bold ${classes.brandPrimary} leading-tight`}>Chaturvedi <span className={classes.brandSecondary}>Classes</span></h1>
+                                        <p className={`text-[10px] md:text-xs ${classes.textMuted} font-semibold tracking-wider`}>EXCELLENCE IN EDUCATION</p>
                                     </div>
                                 </div>
 
                                 <div className="flex items-center gap-4">
                                     <button
                                         onClick={toggleNav}
-                                        className="p-2 text-gray-600 dark:text-gray-300 hover:text-red-700 dark:hover:text-red-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        className={`p-2 ${classes.textSecondary} ${classes.actionHoverText} transition-colors rounded-lg ${classes.actionHoverBg}`}
                                         aria-label="Open navigation menu"
                                     >
                                         <Menu className="w-6 h-6" />
@@ -1402,19 +1522,19 @@
                         onClick={closeNav}
                     >
                         {/* Backdrop */}
-                        <div className="absolute inset-0 bg-black/50"></div>
+                        <div className={`absolute inset-0 ${classes.backdrop}`}></div>
 
                         {/* Drawer */}
                         <div
-                            className={`absolute right-0 top-0 h-full w-[280px] max-w-[85vw] bg-white dark:bg-gray-800 shadow-2xl transform transition-transform duration-200 ease-out ${isNavOpen ? 'translate-x-0' : 'translate-x-full'}`}
+                            className={`absolute right-0 top-0 h-full w-[280px] max-w-[85vw] ${classes.drawerBg} shadow-2xl transform transition-transform duration-200 ease-out ${isNavOpen ? 'translate-x-0' : 'translate-x-full'}`}
                             onClick={(e) => e.stopPropagation()}
                             style={{ maxHeight: '100vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}
                         >
                             <div className="flex flex-col h-full">
                                 {/* Drawer Header */}
-                                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                                <div className={`flex items-center justify-between px-4 py-3 border-b ${classes.border}`}>
                                     <div className="flex items-center gap-2.5">
-                                        <div className="w-8 h-8 flex items-center justify-center overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
+                                        <div className={`w-8 h-8 flex items-center justify-center overflow-hidden rounded-full ${classes.navItemActiveBg}`}>
                                             {profilePicture ? (
                                                 <img src={profilePicture} alt="Profile" className="w-full h-full object-cover rounded-full" />
                                             ) : (
@@ -1422,13 +1542,13 @@
                                             )}
                                         </div>
                                         <div>
-                                            <h2 className="text-base font-semibold text-red-900 dark:text-red-400 leading-tight">{username}</h2>
-                                            <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">Chaturvedi Classes</p>
+                                            <h2 className={`text-base font-semibold ${classes.brandPrimary} leading-tight`}>{username}</h2>
+                                            <p className={`text-[10px] ${classes.textMuted} leading-tight`}>Chaturvedi Classes</p>
                                         </div>
                                     </div>
                                     <button
                                         onClick={closeNav}
-                                        className="p-0 text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        className={`p-0 ${classes.textMuted} ${classes.actionHoverText} transition-colors rounded-lg ${classes.actionHoverBg}`}
                                         aria-label="Close menu"
                                         style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                     >
@@ -1443,44 +1563,44 @@
                                     <nav className="space-y-1 px-4">
                                         <button
                                             onClick={() => { closeNav(); onNavigateToProfile(); }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-200 hover:bg-yellow-50 dark:hover:bg-gray-700 hover:text-red-700 dark:hover:text-red-400 rounded-xl transition-colors group"
+                                            className={`w-full flex items-center gap-3 px-4 py-3 text-left ${classes.navItemText} ${classes.actionHoverBg} ${classes.actionHoverText} rounded-xl transition-colors group`}
                                         >
-                                            <User className="w-5 h-5 text-gray-400 dark:text-gray-500 group-hover:text-red-700 dark:group-hover:text-red-400" />
+                                            <User className={`w-5 h-5 ${classes.iconMuted} ${classes.iconHover}`} />
                                             <span className="font-medium">Profile</span>
                                         </button>
 
                                         <button
                                             onClick={() => { closeNav(); onNavigateToLibrary(); }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-yellow-50 hover:text-red-700 rounded-xl transition-colors group"
+                                            className={`w-full flex items-center gap-3 px-4 py-3 text-left ${classes.navItemText} ${classes.actionHoverBg} ${classes.actionHoverText} rounded-xl transition-colors group`}
                                         >
-                                            <Library className="w-5 h-5 text-gray-400 group-hover:text-red-700" />
+                                            <Library className={`w-5 h-5 ${classes.iconMuted} ${classes.iconHover}`} />
                                             <span className="font-medium">NCERT Library</span>
                                         </button>
 
                                         <button
                                             onClick={() => { closeNav(); }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-yellow-50 hover:text-red-700 rounded-xl transition-colors group"
+                                            className={`w-full flex items-center gap-3 px-4 py-3 text-left ${classes.navItemText} ${classes.actionHoverBg} ${classes.actionHoverText} rounded-xl transition-colors group`}
                                         >
-                                            <Book className="w-5 h-5 text-gray-400 group-hover:text-red-700" />
+                                            <Book className={`w-5 h-5 ${classes.iconMuted} ${classes.iconHover}`} />
                                             <span className="font-medium">My Books</span>
                                         </button>
 
                                         <button
                                             onClick={() => { closeNav(); }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-yellow-50 hover:text-red-700 rounded-xl transition-colors group"
+                                            className={`w-full flex items-center gap-3 px-4 py-3 text-left ${classes.navItemText} ${classes.actionHoverBg} ${classes.actionHoverText} rounded-xl transition-colors group`}
                                         >
-                                            <GraduationCap className="w-5 h-5 text-gray-400 group-hover:text-red-700" />
+                                            <GraduationCap className={`w-5 h-5 ${classes.iconMuted} ${classes.iconHover}`} />
                                             <span className="font-medium">Classes</span>
                                         </button>
 
                                         <button
                                             onClick={() => { closeNav(); onNavigateToNotifications(); }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-yellow-50 hover:text-red-700 rounded-xl transition-colors group"
+                                            className={`w-full flex items-center gap-3 px-4 py-3 text-left ${classes.navItemText} ${classes.actionHoverBg} ${classes.actionHoverText} rounded-xl transition-colors group`}
                                         >
                                             <div className="relative">
-                                                <Bell className="w-5 h-5 text-gray-400 group-hover:text-red-700" />
+                                                <Bell className={`w-5 h-5 ${classes.iconMuted} ${classes.iconHover}`} />
                                                 {hasUnreadNotifications && (
-                                                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                                                    <span className={`absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 ${classes.surface}`}></span>
                                                 )}
                                             </div>
                                             <span className="font-medium">Notifications</span>
@@ -1490,9 +1610,9 @@
 
                                         <button
                                             onClick={() => { closeNav(); onNavigateToSettings(); }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-200 hover:bg-yellow-50 dark:hover:bg-gray-700 hover:text-red-700 dark:hover:text-red-400 rounded-xl transition-colors group"
+                                            className={`w-full flex items-center gap-3 px-4 py-3 text-left ${classes.navItemText} ${classes.actionHoverBg} ${classes.actionHoverText} rounded-xl transition-colors group`}
                                         >
-                                            <svg className="w-5 h-5 text-gray-400 dark:text-gray-500 group-hover:text-red-700 dark:group-hover:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg className={`w-5 h-5 ${classes.iconMuted} ${classes.iconHover}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                             </svg>
@@ -1507,17 +1627,17 @@
                                                 closeNav();
                                                 window.open('https://play.google.com/store/apps/dev?id=8205647922049206296', '_blank');
                                             }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-200 hover:bg-yellow-50 dark:hover:bg-gray-700 hover:text-red-700 dark:hover:text-red-400 rounded-xl transition-colors group"
+                                            className={`w-full flex items-center gap-3 px-4 py-3 text-left ${classes.navItemText} ${classes.actionHoverBg} ${classes.actionHoverText} rounded-xl transition-colors group`}
                                         >
-                                            <Grid className="w-5 h-5 text-gray-400 dark:text-gray-500 group-hover:text-red-700 dark:group-hover:text-red-400" />
+                                            <Grid className={`w-5 h-5 ${classes.iconMuted} ${classes.iconHover}`} />
                                             <span className="font-medium">More Apps</span>
                                         </button>
 
                                         <button
                                             onClick={() => { closeNav(); }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-200 hover:bg-yellow-50 dark:hover:bg-gray-700 hover:text-red-700 dark:hover:text-red-400 rounded-xl transition-colors group"
+                                            className={`w-full flex items-center gap-3 px-4 py-3 text-left ${classes.navItemText} ${classes.actionHoverBg} ${classes.actionHoverText} rounded-xl transition-colors group`}
                                         >
-                                            <Star className="w-5 h-5 text-gray-400 dark:text-gray-500 group-hover:text-red-700 dark:group-hover:text-red-400" />
+                                            <Star className={`w-5 h-5 ${classes.iconMuted} ${classes.iconHover}`} />
                                             <span className="font-medium">Rate App</span>
                                         </button>
 
@@ -1548,17 +1668,17 @@
                                                     });
                                                 }
                                             }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-200 hover:bg-yellow-50 dark:hover:bg-gray-700 hover:text-red-700 dark:hover:text-red-400 rounded-xl transition-colors group"
+                                            className={`w-full flex items-center gap-3 px-4 py-3 text-left ${classes.navItemText} ${classes.actionHoverBg} ${classes.actionHoverText} rounded-xl transition-colors group`}
                                         >
-                                            <Share2 className="w-5 h-5 text-gray-400 dark:text-gray-500 group-hover:text-red-700 dark:group-hover:text-red-400" />
+                                            <Share2 className={`w-5 h-5 ${classes.iconMuted} ${classes.iconHover}`} />
                                             <span className="font-medium">Share App</span>
                                         </button>
 
                                         <button
                                             onClick={() => { closeNav(); onNavigateToLocation(); }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-200 hover:bg-yellow-50 dark:hover:bg-gray-700 hover:text-red-700 dark:hover:text-red-400 rounded-xl transition-colors group"
+                                            className={`w-full flex items-center gap-3 px-4 py-3 text-left ${classes.navItemText} ${classes.actionHoverBg} ${classes.actionHoverText} rounded-xl transition-colors group`}
                                         >
-                                            <MapPin className="w-5 h-5 text-gray-400 dark:text-gray-500 group-hover:text-red-700 dark:group-hover:text-red-400" />
+                                            <MapPin className={`w-5 h-5 ${classes.iconMuted} ${classes.iconHover}`} />
                                             <span className="font-medium">Location</span>
                                         </button>
 
@@ -1592,7 +1712,7 @@
                     <main className="home-main-content flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
                         <div className="animate-in fade-in slide-in-from-bottom-8 duration-500">
                             {/* Username Card - Fixed overlapping */}
-                            <div className="bg-gradient-to-r from-red-50 to-yellow-50 dark:from-gray-800 dark:to-gray-700 rounded-2xl border border-red-100 dark:border-gray-600 p-6 mb-6 relative overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 mt-4">
+                            <div className={`${classes.welcomeCardBg} rounded-2xl border border-red-100 dark:border-gray-600 p-6 mb-6 relative overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 mt-4`}>
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-4">
                                         <div
@@ -1607,10 +1727,10 @@
                                             )}
                                         </div>
                                         <div>
-                                            <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 dark:text-gray-100">
-                                                Hey, <span className="text-red-700 dark:text-red-400">{username.split(' ')[0]}</span>
+                                            <h2 className={`text-2xl md:text-3xl font-semibold ${classes.textPrimary}`}>
+                                                Hey, <span className={classes.brandPrimary}>{username.split(' ')[0]}</span>
                                             </h2>
-                                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Ready to learn today?</p>
+                                            <p className={`text-sm ${classes.textSecondary} mt-1`}>Ready to learn today?</p>
                                         </div>
                                     </div>
                                     <button
@@ -1719,15 +1839,15 @@
                                     </div>
 
                                     {/* Banner Indicators */}
-                                    <div className="flex justify-center gap-1.5 mt-3">
+                                    <div className="flex justify-center gap-1 mt-2">
                                         {[0, 1, 2].map((index) => (
                                             <button
                                                 key={index}
                                                 onClick={() => setBannerIndex(index)}
-                                                className={`h-1.5 transition-all duration-300 rounded-full ${bannerIndex === index 
-                                                    ? 'w-6 bg-red-700 dark:bg-red-500' 
-                                                    : 'w-1.5 bg-gray-300 dark:bg-gray-600'
-                                                }`}
+                                                className={`h-1 w-1 rounded-full transition-all duration-300 scale-[0.4] ${bannerIndex === index
+                                                    ? classes.indicatorActive
+                                                    : `${classes.indicatorInactive} opacity-60 hover:opacity-100`
+                                                    }`}
                                                 aria-label={`Go to banner ${index + 1}`}
                                             />
                                         ))}
@@ -1737,11 +1857,11 @@
 
                             {/* Quick Actions - Horizontal Scrollable with Arrows */}
                             <div className="mb-8">
-                                <h3 className="text-lg font-bold text-gray-900 mb-2">Quick Actions</h3>
+                                <h3 className={`text-lg font-bold ${classes.textPrimary} mb-2`}>Quick Actions</h3>
                                 <div className="relative group">
                                     {/* Scroll Fade Masks */}
-                                    <div className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-gray-50 dark:from-gray-900 to-transparent z-10 pointer-events-none transition-opacity duration-300 ${showLeftArrow ? 'opacity-100' : 'opacity-0'}`} />
-                                    <div className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-gray-50 dark:from-gray-900 to-transparent z-10 pointer-events-none transition-opacity duration-300 ${showRightArrow ? 'opacity-100' : 'opacity-0'}`} />
+                                     <div className={`absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-gray-50 via-gray-50/80 dark:from-gray-900 dark:via-gray-900/80 to-transparent z-10 pointer-events-none transition-opacity duration-300 ${showLeftArrow ? 'opacity-100' : 'opacity-0'}`} />
+                                     <div className={`absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-gray-50 via-gray-50/80 dark:from-gray-900 dark:via-gray-900/80 to-transparent z-10 pointer-events-none transition-opacity duration-300 ${showRightArrow ? 'opacity-100' : 'opacity-0'}`} />
 
                                     {showLeftArrow && (
                                         <button
@@ -1749,9 +1869,9 @@
                                                 const container = document.getElementById('quick-actions-scroll');
                                                 if (container) container.scrollBy({ left: -100, behavior: 'smooth' });
                                             }}
-                                            className="absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white shadow-md rounded-full p-2 transition-all"
+                                            className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 ${classes.surface} shadow-md rounded-full p-2 transition-all opacity-90 hover:opacity-100`}
                                         >
-                                            <ChevronLeft className="w-5 h-5 text-gray-700" />
+                                            <ChevronLeft className={`w-5 h-5 ${classes.textPrimary}`} />
                                         </button>
                                     )}
                                     <div
@@ -1769,22 +1889,22 @@
                                         }}
                                     >
                                         <div className="flex gap-2 pb-2 px-2 pt-3" style={{ width: 'max-content' }}>
-                                            <a
-                                                href={`tel:${helpPhoneNumber}`}
-                                                className="flex-shrink-0 flex flex-col items-center justify-center gap-1.5 w-20 h-20 bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-red-300 transition-all duration-300 group"
-                                            >
-                                                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center group-hover:bg-red-200 transition-colors">
-                                                    <Phone className="w-5 h-5 text-red-700" />
-                                                </div>
-                                                <span className="text-[10px] font-semibold text-gray-700 text-center">Help</span>
-                                            </a>
+                                             <a
+                                                 href={`tel:${helpPhoneNumber}`}
+                                                 className={`flex-shrink-0 flex flex-col items-center justify-center gap-1.5 w-20 h-20 ${classes.surface} rounded-2xl border ${classes.border} shadow-sm hover:shadow-md ${classes.actionHoverBorder} transition-all duration-300 group`}
+                                             >
+                                                 <div className={`w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center group-hover:bg-red-200 dark:group-hover:bg-red-900/50 transition-colors`}>
+                                                     <Phone className={`w-5 h-5 ${classes.primaryText}`} />
+                                                 </div>
+                                                 <span className={`text-[10px] font-semibold ${classes.textSecondary} text-center`}>Help</span>
+                                             </a>
 
-                                            <button
-                                                onClick={() => onNavigateToNotifications()}
-                                                className="flex-shrink-0 flex flex-col items-center justify-center gap-1.5 w-20 h-20 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md hover:border-yellow-300 dark:hover:border-yellow-600 transition-all duration-300 group relative"
-                                            >
-                                                <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center group-hover:bg-yellow-200 transition-colors relative">
-                                                    <Bell className="w-5 h-5 text-yellow-700" />
+                                             <button
+                                                 onClick={() => onNavigateToNotifications()}
+                                                 className={`flex-shrink-0 flex flex-col items-center justify-center gap-1.5 w-20 h-20 ${classes.surface} rounded-2xl border ${classes.border} shadow-sm hover:shadow-md hover:border-yellow-300 dark:hover:border-yellow-600 transition-all duration-300 group relative`}
+                                             >
+                                                 <div className="w-10 h-10 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center group-hover:bg-yellow-200 dark:group-hover:bg-yellow-900/50 transition-colors relative">
+                                                     <Bell className={`w-5 h-5 ${classes.brandSecondary}`} />
                                                     {/* Notification badge - only show if unread */}
                                                     {hasUnreadNotifications && (
                                                         <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
@@ -1848,12 +1968,12 @@
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                     <div
                                         onClick={onNavigateToLibrary}
-                                        className="bg-gradient-to-br from-red-50 to-yellow-50 rounded-2xl border border-red-100 p-4 hover:shadow-xl hover:shadow-gray-200/50 hover:border-red-400 transition-all duration-300 cursor-pointer group relative overflow-hidden"
+                                        className="bg-gradient-to-br from-red-50 to-yellow-50 dark:from-red-900/20 dark:to-yellow-900/20 rounded-2xl border border-red-100 dark:border-red-900/30 p-4 hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-none hover:border-red-400 dark:hover:border-red-800 transition-all duration-300 cursor-pointer group relative overflow-hidden"
                                     >
                                         {/* Background decorative elements */}
-                                        <div className="absolute top-0 right-0 w-20 h-20 bg-red-200/20 rounded-full -mr-10 -mt-10"></div>
-                                        <div className="absolute bottom-0 left-0 w-16 h-16 bg-yellow-200/20 rounded-full -ml-8 -mb-8"></div>
-                                        <div className="absolute top-1/2 right-4 w-12 h-12 bg-red-300/10 rounded-full"></div>
+                                        <div className="absolute top-0 right-0 w-20 h-20 bg-red-200/20 dark:bg-red-900/10 rounded-full -mr-10 -mt-10"></div>
+                                        <div className="absolute bottom-0 left-0 w-16 h-16 bg-yellow-200/20 dark:bg-yellow-900/10 rounded-full -ml-8 -mb-8"></div>
+                                        <div className="absolute top-1/2 right-4 w-12 h-12 bg-red-300/10 dark:bg-red-500/5 rounded-full"></div>
 
                                         <div className="relative z-10 flex items-center justify-between">
                                             <div className="flex items-center gap-3">
@@ -1868,12 +1988,12 @@
 
                                     <div
                                         onClick={onNavigateToAllClasses}
-                                        className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100 p-4 hover:shadow-xl hover:shadow-gray-200/50 hover:border-blue-400 transition-all duration-300 cursor-pointer group relative overflow-hidden"
+                                        className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl border border-blue-100 dark:border-blue-900/30 p-4 hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-none hover:border-blue-400 dark:hover:border-blue-800 transition-all duration-300 cursor-pointer group relative overflow-hidden"
                                     >
                                         {/* Background decorative elements */}
-                                        <div className="absolute top-0 right-0 w-20 h-20 bg-blue-200/20 rounded-full -mr-10 -mt-10"></div>
-                                        <div className="absolute bottom-0 left-0 w-16 h-16 bg-indigo-200/20 rounded-full -ml-8 -mb-8"></div>
-                                        <div className="absolute top-1/2 right-4 w-12 h-12 bg-blue-300/10 rounded-full"></div>
+                                        <div className="absolute top-0 right-0 w-20 h-20 bg-blue-200/20 dark:bg-blue-900/10 rounded-full -mr-10 -mt-10"></div>
+                                        <div className="absolute bottom-0 left-0 w-16 h-16 bg-indigo-200/20 dark:bg-indigo-900/10 rounded-full -ml-8 -mb-8"></div>
+                                        <div className="absolute top-1/2 right-4 w-12 h-12 bg-blue-300/10 dark:bg-blue-500/5 rounded-full"></div>
 
                                         <div className="relative z-10 flex items-center justify-between">
                                             <div className="flex items-center gap-3">
@@ -1888,12 +2008,12 @@
 
                                     <div
                                         onClick={onNavigateToMindMap}
-                                        className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl border border-purple-100 p-4 hover:shadow-xl hover:shadow-gray-200/50 hover:border-purple-400 transition-all duration-300 cursor-pointer group relative overflow-hidden"
+                                        className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-2xl border border-purple-100 dark:border-purple-900/30 p-4 hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-none hover:border-purple-400 dark:hover:border-purple-800 transition-all duration-300 cursor-pointer group relative overflow-hidden"
                                     >
                                         {/* Background decorative elements */}
-                                        <div className="absolute top-0 right-0 w-20 h-20 bg-purple-200/20 rounded-full -mr-10 -mt-10"></div>
-                                        <div className="absolute bottom-0 left-0 w-16 h-16 bg-pink-200/20 rounded-full -ml-8 -mb-8"></div>
-                                        <div className="absolute top-1/2 right-4 w-12 h-12 bg-purple-300/10 rounded-full"></div>
+                                        <div className="absolute top-0 right-0 w-20 h-20 bg-purple-200/20 dark:bg-purple-900/10 rounded-full -mr-10 -mt-10"></div>
+                                        <div className="absolute bottom-0 left-0 w-16 h-16 bg-pink-200/20 dark:bg-pink-900/10 rounded-full -ml-8 -mb-8"></div>
+                                        <div className="absolute top-1/2 right-4 w-12 h-12 bg-purple-300/10 dark:bg-purple-500/5 rounded-full"></div>
 
                                         {/* Useful Badge */}
                                         <span className="absolute top-0 right-0 bg-gradient-to-bl from-purple-600 to-purple-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl shadow-sm z-20">
@@ -1998,6 +2118,7 @@
 
         // --- Daily Quiz Component ---
         function DailyQuiz({ onBackToHome, username }) {
+            const { classes } = useTheme();
             const [currentQuestion, setCurrentQuestion] = useState(0);
             const [selectedAnswer, setSelectedAnswer] = useState(null);
             const [score, setScore] = useState({ correct: 0, wrong: 0 });
@@ -2006,55 +2127,13 @@
             const [userClass, setUserClass] = useState('');
 
             // Quiz questions by class (10 questions per class)
-            const quizQuestions = {
-                9: [
-                    { question: "What is the value of π (pi) approximately?", options: ["3.14", "2.71", "1.41", "4.56"], correct: 0 },
-                    { question: "What is the chemical symbol for water?", options: ["H2O", "CO2", "O2", "NaCl"], correct: 0 },
-                    { question: "Who wrote 'Romeo and Juliet'?", options: ["Charles Dickens", "William Shakespeare", "Jane Austen", "Mark Twain"], correct: 1 },
-                    { question: "What is the capital of India?", options: ["Mumbai", "Delhi", "Kolkata", "Chennai"], correct: 1 },
-                    { question: "What is 15 × 8?", options: ["100", "120", "110", "130"], correct: 1 },
-                    { question: "Which planet is closest to the Sun?", options: ["Venus", "Mercury", "Earth", "Mars"], correct: 1 },
-                    { question: "What is the largest ocean on Earth?", options: ["Atlantic", "Indian", "Arctic", "Pacific"], correct: 3 },
-                    { question: "What is the square root of 64?", options: ["6", "7", "8", "9"], correct: 2 },
-                    { question: "Which gas do plants absorb from the atmosphere?", options: ["Oxygen", "Carbon Dioxide", "Nitrogen", "Hydrogen"], correct: 1 },
-                    { question: "What is the smallest prime number?", options: ["0", "1", "2", "3"], correct: 2 }
-                ],
-                10: [
-                    { question: "What is the formula for the area of a circle?", options: ["πr²", "2πr", "πd", "r²"], correct: 0 },
-                    { question: "What is the chemical formula for glucose?", options: ["C6H12O6", "H2O", "CO2", "NaCl"], correct: 0 },
-                    { question: "Who discovered the law of gravity?", options: ["Einstein", "Newton", "Galileo", "Darwin"], correct: 1 },
-                    { question: "What is the speed of light in vacuum (approximately)?", options: ["3 × 10⁸ m/s", "3 × 10⁶ m/s", "3 × 10¹⁰ m/s", "3 × 10⁴ m/s"], correct: 0 },
-                    { question: "What is the value of sin(90°)?", options: ["0", "0.5", "1", "√2/2"], correct: 2 },
-                    { question: "Which process do plants use to make food?", options: ["Respiration", "Photosynthesis", "Digestion", "Transpiration"], correct: 1 },
-                    { question: "What is the atomic number of Carbon?", options: ["4", "5", "6", "7"], correct: 2 },
-                    { question: "What is the derivative of x²?", options: ["x", "2x", "x²", "2x²"], correct: 1 },
-                    { question: "Which blood group is known as universal donor?", options: ["A", "B", "AB", "O"], correct: 3 },
-                    { question: "What is the pH value of pure water?", options: ["5", "6", "7", "8"], correct: 2 }
-                ],
-                11: [
-                    { question: "What is the derivative of eˣ?", options: ["eˣ", "xeˣ", "eˣ/x", "ln(x)"], correct: 0 },
-                    { question: "What is the SI unit of force?", options: ["Joule", "Newton", "Watt", "Pascal"], correct: 1 },
-                    { question: "What is the chemical symbol for Gold?", options: ["Go", "Gd", "Au", "Ag"], correct: 2 },
-                    { question: "What is the value of log₁₀(100)?", options: ["1", "2", "10", "100"], correct: 1 },
-                    { question: "Which law states F = ma?", options: ["Newton's First Law", "Newton's Second Law", "Newton's Third Law", "Ohm's Law"], correct: 1 },
-                    { question: "What is the molecular formula of methane?", options: ["CH4", "C2H6", "C3H8", "CO2"], correct: 0 },
-                    { question: "What is the integral of 1/x?", options: ["x", "ln(x)", "1/x²", "x²"], correct: 1 },
-                    { question: "Which particle has no charge?", options: ["Proton", "Electron", "Neutron", "Ion"], correct: 2 },
-                    { question: "What is the value of tan(45°)?", options: ["0", "1", "√3", "∞"], correct: 1 },
-                    { question: "What is Avogadro's number approximately?", options: ["6.022 × 10²³", "6.022 × 10²²", "6.022 × 10²⁴", "6.022 × 10²¹"], correct: 0 }
-                ],
-                12: [
-                    { question: "What is the derivative of ln(x)?", options: ["1/x", "x", "1/ln(x)", "ln(x)/x"], correct: 0 },
-                    { question: "What is the speed of light in vacuum?", options: ["3 × 10⁸ m/s", "3 × 10⁶ m/s", "3 × 10¹⁰ m/s", "3 × 10⁴ m/s"], correct: 0 },
-                    { question: "What is the chemical formula for benzene?", options: ["C6H6", "C6H12", "C7H8", "C8H10"], correct: 0 },
-                    { question: "What is the value of ∫x dx?", options: ["x²", "x²/2", "x", "1"], correct: 1 },
-                    { question: "What is Planck's constant (h) approximately?", options: ["6.626 × 10⁻³⁴ J·s", "6.626 × 10⁻³³ J·s", "6.626 × 10⁻³⁵ J·s", "6.626 × 10⁻³² J·s"], correct: 0 },
-                    { question: "What is the molecular formula of ethanol?", options: ["CH3OH", "C2H5OH", "C3H7OH", "C4H9OH"], correct: 1 },
-                    { question: "What is the limit of (sin x)/x as x approaches 0?", options: ["0", "1", "∞", "undefined"], correct: 1 },
-                    { question: "What is the charge of an electron?", options: ["+1.6 × 10⁻¹⁹ C", "-1.6 × 10⁻¹⁹ C", "0", "1.6 × 10⁻¹⁹ C"], correct: 1 },
-                    { question: "What is the value of e (Euler's number) approximately?", options: ["2.718", "3.141", "1.414", "1.732"], correct: 0 },
-                    { question: "What is the formula for kinetic energy?", options: ["mgh", "½mv²", "mv", "Fd"], correct: 1 }
-                ]
+            // Quiz questions loaded from external file (js/questions.js)
+            // Fallback to empty structure if file fails to load
+            const quizQuestions = window.ALL_QUIZ_QUESTIONS || {
+                9: [{ question: "Error loading questions.", options: ["Error"], correct: 0 }],
+                10: [{ question: "Error loading questions.", options: ["Error"], correct: 0 }],
+                11: [{ question: "Error loading questions.", options: ["Error"], correct: 0 }],
+                12: [{ question: "Error loading questions.", options: ["Error"], correct: 0 }]
             };
 
             // Get today's date string for unique quiz per day
@@ -2216,8 +2295,8 @@
                 const percentage = Math.round((score.correct / totalQuestions) * 100);
 
                 return (
-                    <div className="min-h-screen flex flex-col font-sans bg-gray-50 text-gray-900">
-                        <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+                    <div className={`h-screen overflow-hidden flex flex-col font-sans ${classes.background} ${classes.textPrimary}`}>
+                        <header className={`${classes.surface} ${classes.border} border-b sticky top-0 z-20 shadow-sm flex-none`}>
                             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                                 <div className="flex justify-between items-center h-16">
                                     <div className="flex items-center gap-3 select-none">
@@ -2225,13 +2304,13 @@
                                             <img src="img/logo.png" alt="Chaturvedi Classes Logo" className="w-full h-full object-contain" />
                                         </div>
                                         <div>
-                                            <h1 className="text-lg md:text-xl font-bold text-red-900 leading-tight">Chaturvedi <span className="text-yellow-600">Classes</span></h1>
-                                            <p className="text-[10px] md:text-xs text-gray-500 font-semibold tracking-wider">EXCELLENCE IN EDUCATION</p>
+                                            <h1 className={`text-lg md:text-xl font-bold ${classes.brandPrimary} leading-tight`}>Chaturvedi <span className={classes.brandSecondary}>Classes</span></h1>
+                                            <p className={`text-[10px] md:text-xs ${classes.textMuted} font-semibold tracking-wider`}>EXCELLENCE IN EDUCATION</p>
                                         </div>
                                     </div>
                                     <button
                                         onClick={onBackToHome}
-                                        className="p-2 text-gray-600 hover:text-red-700 transition-colors rounded-lg hover:bg-gray-100"
+                                        className={`p-2 ${classes.textSecondary} ${classes.actionHoverText} transition-colors rounded-lg ${classes.actionHoverBg}`}
                                     >
                                         <ArrowLeft className="w-6 h-6" />
                                     </button>
@@ -2239,24 +2318,24 @@
                             </div>
                         </header>
 
-                        <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+                        <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 overflow-y-auto">
                             <div className="animate-in fade-in slide-in-from-bottom-8 duration-500">
-                                <div className="bg-white rounded-2xl border border-gray-200 shadow-xl p-6 md:p-8 text-center">
+                                <div className={`${classes.surface} rounded-2xl ${classes.border} border shadow-xl p-6 md:p-8 text-center`}>
                                     <div className="mb-6">
-                                        <div className="w-20 h-20 bg-gradient-to-br from-green-100 to-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <div className={`w-20 h-20 ${classes.welcomeCardBg} rounded-full flex items-center justify-center mx-auto mb-4`}>
                                             <Star className="w-10 h-10 text-green-600" />
                                         </div>
-                                        <h2 className="text-3xl font-bold text-gray-900 mb-2">Quiz Completed!</h2>
-                                        <p className="text-gray-600">Here's your score for today</p>
+                                        <h2 className={`text-3xl font-bold ${classes.textPrimary} mb-2`}>Quiz Completed!</h2>
+                                        <p className={classes.textSecondary}>Here's your score for today</p>
                                     </div>
 
-                                    <div className="bg-gradient-to-r from-red-50 to-yellow-50 rounded-xl p-6 mb-6">
-                                        <div className="text-5xl font-bold text-red-700 mb-2">{percentage}%</div>
-                                        <div className="text-lg text-gray-700">
+                                    <div className={`${classes.welcomeCardBg} rounded-xl p-6 mb-6`}>
+                                        <div className={`text-5xl font-bold ${classes.brandPrimary} mb-2`}>{percentage}%</div>
+                                        <div className={`text-lg ${classes.textPrimary}`}>
                                             <span className="text-green-600 font-semibold">{score.correct}</span> Correct |
                                             <span className="text-red-600 font-semibold"> {score.wrong}</span> Wrong
                                         </div>
-                                        <div className="text-sm text-gray-500 mt-2">Out of {totalQuestions} questions</div>
+                                        <div className={`text-sm ${classes.textMuted} mt-2`}>Out of {totalQuestions} questions</div>
                                     </div>
 
                                     <div className="flex gap-4">
@@ -2269,7 +2348,7 @@
                                         </button>
                                         <button
                                             onClick={onBackToHome}
-                                            className="flex-1 border-2 border-gray-300 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-50 transition-all duration-300"
+                                            className={`flex-1 border-2 ${classes.border} ${classes.textSecondary} py-3 rounded-xl font-semibold ${classes.actionHoverBg} transition-all duration-300`}
                                         >
                                             Go Back
                                         </button>
@@ -2286,8 +2365,8 @@
             // If can't take quiz, show message
             if (!canTakeQuiz()) {
                 return (
-                    <div className="min-h-screen flex flex-col font-sans bg-gray-50 text-gray-900">
-                        <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+                    <div className={`h-screen overflow-hidden flex flex-col font-sans ${classes.background} ${classes.textPrimary}`}>
+                        <header className={`${classes.surface} ${classes.border} border-b sticky top-0 z-20 shadow-sm flex-none`}>
                             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                                 <div className="flex justify-between items-center h-16">
                                     <div className="flex items-center gap-3 select-none">
@@ -2295,13 +2374,13 @@
                                             <img src="img/logo.png" alt="Chaturvedi Classes Logo" className="w-full h-full object-contain" />
                                         </div>
                                         <div>
-                                            <h1 className="text-lg md:text-xl font-bold text-red-900 leading-tight">Chaturvedi <span className="text-yellow-600">Classes</span></h1>
-                                            <p className="text-[10px] md:text-xs text-gray-500 font-semibold tracking-wider">EXCELLENCE IN EDUCATION</p>
+                                            <h1 className={`text-lg md:text-xl font-bold ${classes.brandPrimary} leading-tight`}>Chaturvedi <span className={classes.brandSecondary}>Classes</span></h1>
+                                            <p className={`text-[10px] md:text-xs ${classes.textMuted} font-semibold tracking-wider`}>EXCELLENCE IN EDUCATION</p>
                                         </div>
                                     </div>
                                     <button
                                         onClick={onBackToHome}
-                                        className="p-2 text-gray-600 hover:text-red-700 transition-colors rounded-lg hover:bg-gray-100"
+                                        className={`p-2 ${classes.textSecondary} ${classes.actionHoverText} transition-colors rounded-lg ${classes.actionHoverBg}`}
                                     >
                                         <ArrowLeft className="w-6 h-6" />
                                     </button>
@@ -2309,14 +2388,14 @@
                             </div>
                         </header>
 
-                        <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+                        <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 overflow-y-auto">
                             <div className="animate-in fade-in slide-in-from-bottom-8 duration-500">
-                                <div className="bg-white rounded-2xl border border-gray-200 shadow-xl p-6 md:p-8 text-center">
-                                    <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <Bell className="w-8 h-8 text-yellow-600" />
+                                <div className={`${classes.surface} rounded-2xl ${classes.border} border shadow-xl p-6 md:p-8 text-center`}>
+                                    <div className={`w-16 h-16 ${classes.surfaceHighlight} rounded-full flex items-center justify-center mx-auto mb-4`}>
+                                        <Bell className={`w-8 h-8 ${classes.brandSecondary}`} />
                                     </div>
-                                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Quiz Already Completed!</h2>
-                                    <p className="text-gray-600 mb-6">You've already completed today's quiz. Come back tomorrow for a new challenge!</p>
+                                    <h2 className={`text-2xl font-bold ${classes.textPrimary} mb-2`}>Quiz Already Completed!</h2>
+                                    <p className={`${classes.textSecondary} mb-6`}>You've already completed today's quiz. Come back tomorrow for a new challenge!</p>
                                     <button
                                         onClick={onBackToHome}
                                         className="bg-red-700 text-white px-8 py-3 rounded-xl font-semibold hover:bg-red-800 transition-all duration-300"
@@ -2336,8 +2415,8 @@
                 const percentage = Math.round((score.correct / totalQuestions) * 100);
 
                 return (
-                    <div className="min-h-screen flex flex-col font-sans bg-gray-50 text-gray-900">
-                        <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+                    <div className={`h-screen overflow-hidden flex flex-col font-sans ${classes.background} ${classes.textPrimary}`}>
+                        <header className={`${classes.surface} ${classes.border} border-b sticky top-0 z-20 shadow-sm flex-none`}>
                             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                                 <div className="flex justify-between items-center h-16">
                                     <div className="flex items-center gap-3 select-none">
@@ -2345,13 +2424,13 @@
                                             <img src="img/logo.png" alt="Chaturvedi Classes Logo" className="w-full h-full object-contain" />
                                         </div>
                                         <div>
-                                            <h1 className="text-lg md:text-xl font-bold text-red-900 leading-tight">Chaturvedi <span className="text-yellow-600">Classes</span></h1>
-                                            <p className="text-[10px] md:text-xs text-gray-500 font-semibold tracking-wider">EXCELLENCE IN EDUCATION</p>
+                                            <h1 className={`text-lg md:text-xl font-bold ${classes.brandPrimary} leading-tight`}>Chaturvedi <span className={classes.brandSecondary}>Classes</span></h1>
+                                            <p className={`text-[10px] md:text-xs ${classes.textMuted} font-semibold tracking-wider`}>EXCELLENCE IN EDUCATION</p>
                                         </div>
                                     </div>
                                     <button
                                         onClick={onBackToHome}
-                                        className="p-2 text-gray-600 hover:text-red-700 transition-colors rounded-lg hover:bg-gray-100"
+                                        className={`p-2 ${classes.textSecondary} ${classes.actionHoverText} transition-colors rounded-lg ${classes.actionHoverBg}`}
                                     >
                                         <ArrowLeft className="w-6 h-6" />
                                     </button>
@@ -2359,24 +2438,24 @@
                             </div>
                         </header>
 
-                        <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+                        <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 overflow-y-auto">
                             <div className="animate-in fade-in slide-in-from-bottom-8 duration-500">
-                                <div className="bg-white rounded-2xl border border-gray-200 shadow-xl p-6 md:p-8 text-center">
+                                <div className={`${classes.surface} rounded-2xl ${classes.border} border shadow-xl p-6 md:p-8 text-center`}>
                                     <div className="mb-6">
-                                        <div className="w-20 h-20 bg-gradient-to-br from-green-100 to-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                            <Star className="w-10 h-10 text-green-600" />
+                                        <div className={`w-20 h-20 ${classes.welcomeCardBg} rounded-full flex items-center justify-center mx-auto mb-4`}>
+                                            <Star className={`w-10 h-10 ${classes.brandSecondary}`} />
                                         </div>
-                                        <h2 className="text-3xl font-bold text-gray-900 mb-2">Quiz Completed!</h2>
-                                        <p className="text-gray-600">Here's your score</p>
+                                        <h2 className={`text-3xl font-bold ${classes.textPrimary} mb-2`}>Quiz Completed!</h2>
+                                        <p className={classes.textSecondary}>Here's your score</p>
                                     </div>
 
-                                    <div className="bg-gradient-to-r from-red-50 to-yellow-50 rounded-xl p-6 mb-6">
-                                        <div className="text-5xl font-bold text-red-700 mb-2">{percentage}%</div>
-                                        <div className="text-lg text-gray-700">
+                                    <div className={`${classes.welcomeCardBg} rounded-xl p-6 mb-6`}>
+                                        <div className={`text-5xl font-bold ${classes.brandPrimary} mb-2`}>{percentage}%</div>
+                                        <div className={`text-lg ${classes.textPrimary}`}>
                                             <span className="text-green-600 font-semibold">{score.correct}</span> Correct |
                                             <span className="text-red-600 font-semibold"> {score.wrong}</span> Wrong
                                         </div>
-                                        <div className="text-sm text-gray-500 mt-2">Out of {totalQuestions} questions</div>
+                                        <div className={`text-sm ${classes.textMuted} mt-2`}>Out of {totalQuestions} questions</div>
                                     </div>
 
                                     <div className="flex gap-4">
@@ -2389,7 +2468,7 @@
                                         </button>
                                         <button
                                             onClick={onBackToHome}
-                                            className="flex-1 border-2 border-gray-300 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-50 transition-all duration-300"
+                                            className={`flex-1 border-2 ${classes.border} ${classes.textSecondary} py-3 rounded-xl font-semibold ${classes.actionHoverBg} transition-all duration-300`}
                                         >
                                             Go Back
                                         </button>
@@ -2408,8 +2487,8 @@
             const progress = ((currentQuestion + 1) / questions.length) * 100;
 
             return (
-                <div className="min-h-screen flex flex-col font-sans bg-gray-50 text-gray-900">
-                    <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+                <div className={`h-screen overflow-hidden flex flex-col font-sans ${classes.background} ${classes.textPrimary}`}>
+                    <header className={`${classes.surface} ${classes.border} border-b sticky top-0 z-20 shadow-sm flex-none`}>
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                             <div className="flex justify-between items-center h-16">
                                 <div className="flex items-center gap-3 select-none">
@@ -2417,13 +2496,13 @@
                                         <img src="img/logo.png" alt="Chaturvedi Classes Logo" className="w-full h-full object-contain" />
                                     </div>
                                     <div>
-                                        <h1 className="text-lg md:text-xl font-bold text-red-900 leading-tight">Chaturvedi <span className="text-yellow-600">Classes</span></h1>
-                                        <p className="text-[10px] md:text-xs text-gray-500 font-semibold tracking-wider">EXCELLENCE IN EDUCATION</p>
+                                        <h1 className={`text-lg md:text-xl font-bold ${classes.brandPrimary} leading-tight`}>Chaturvedi <span className={classes.brandSecondary}>Classes</span></h1>
+                                        <p className={`text-[10px] md:text-xs ${classes.textMuted} font-semibold tracking-wider`}>EXCELLENCE IN EDUCATION</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={onBackToHome}
-                                    className="p-2 text-gray-600 hover:text-red-700 transition-colors rounded-lg hover:bg-gray-100"
+                                    className={`p-2 ${classes.textSecondary} ${classes.actionHoverText} transition-colors rounded-lg ${classes.actionHoverBg}`}
                                 >
                                     <ArrowLeft className="w-6 h-6" />
                                 </button>
@@ -2431,19 +2510,19 @@
                         </div>
                     </header>
 
-                    <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+                    <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 overflow-y-auto">
                         <div className="animate-in fade-in slide-in-from-bottom-8 duration-500">
-                            <div className="bg-white rounded-2xl border border-gray-200 shadow-xl p-6 md:p-8">
+                            <div className={`${classes.surface} rounded-2xl ${classes.border} border shadow-xl p-6 md:p-8`}>
                                 {/* Progress Bar */}
                                 <div className="mb-6">
                                     <div className="flex justify-between items-center mb-2">
-                                        <span className="text-sm font-semibold text-gray-700">Question {currentQuestion + 1} of {questions.length}</span>
-                                        <span className="text-sm font-semibold text-gray-700">
-                                            <span className="text-green-600">{score.correct}</span> ✓ |
-                                            <span className="text-red-600"> {score.wrong}</span> ✗
+                                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Question {currentQuestion + 1} of {questions.length}</span>
+                                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                            <span className="text-green-600 dark:text-green-400">{score.correct}</span> ✓ |
+                                            <span className="text-red-600 dark:text-red-400"> {score.wrong}</span> ✗
                                         </span>
                                     </div>
-                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                                         <div
                                             className="bg-gradient-to-r from-red-600 to-yellow-500 h-2 rounded-full transition-all duration-300"
                                             style={{ width: `${progress}%` }}
@@ -2453,7 +2532,7 @@
 
                                 {/* Question */}
                                 <div className="mb-6">
-                                    <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-6">{question.question}</h2>
+                                    <h2 className={`text-xl md:text-2xl font-bold ${classes.textPrimary} mb-6`}>{question.question}</h2>
 
                                     {/* Options */}
                                     <div className="space-y-3">
@@ -2462,15 +2541,15 @@
                                             const isCorrect = index === question.correct;
                                             const showResult = selectedAnswer !== null;
 
-                                            let bgColor = "bg-white border-gray-200 hover:border-red-300";
+                                            let bgColor = `${classes.surface} ${classes.border} ${classes.actionHoverBorder}`;
                                             if (showResult) {
                                                 if (isCorrect) {
-                                                    bgColor = "bg-green-50 border-green-400";
+                                                    bgColor = classes.indicatorSuccess;
                                                 } else if (isSelected && !isCorrect) {
-                                                    bgColor = "bg-red-50 border-red-400";
+                                                    bgColor = classes.indicatorError;
                                                 }
                                             } else if (isSelected) {
-                                                bgColor = "bg-red-50 border-red-400";
+                                                bgColor = `${classes.navItemActiveBg} ${classes.indicatorError.split(' ').filter(c => c.includes('border')).join(' ')}`; // Re-using border part of indicatorError for selection
                                             }
 
                                             return (
@@ -2482,7 +2561,7 @@
                                                         }`}
                                                 >
                                                     <div className="flex items-center justify-between">
-                                                        <span className="font-medium text-gray-900">{option}</span>
+                                                        <span className={`font-medium ${classes.textPrimary}`}>{option}</span>
                                                         {showResult && isCorrect && (
                                                             <span className="text-green-600 font-bold">✓</span>
                                                         )}
@@ -2514,6 +2593,7 @@
 
         // --- AI Chat Component ---
         function AIChat({ onBackToHome }) {
+            const { classes } = useTheme();
             const [messages, setMessages] = useState([
                 { role: 'assistant', content: 'Hello! I\'m your AI assistant. How can I help you with your studies today?' }
             ]);
@@ -2533,7 +2613,7 @@
                 const API_KEY = 'AIzaSyB_RQkwhGIVyfI2DbO0yCklWSEyU7ZV_hg';
 
                 try {
-                    // Placeholder for API call - replace with actual implementation
+                    // Placeholder for API call
                     setTimeout(() => {
                         const aiResponse = {
                             role: 'assistant',
@@ -2561,8 +2641,8 @@
             };
 
             return (
-                <div className="h-screen flex flex-col font-sans bg-gray-50 text-gray-900 allow-select overflow-hidden">
-                    <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm flex-none">
+                <div className={`h-screen flex flex-col font-sans ${classes.background} ${classes.textPrimary} allow-select overflow-hidden`}>
+                    <header className={`${classes.surface} ${classes.border} border-b sticky top-0 z-20 shadow-sm flex-none`}>
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                             <div className="flex justify-between items-center h-16">
                                 <div className="flex items-center gap-3 select-none">
@@ -2570,13 +2650,13 @@
                                         <img src="img/logo.png" alt="Chaturvedi Classes Logo" className="w-full h-full object-contain" />
                                     </div>
                                     <div>
-                                        <h1 className="text-lg md:text-xl font-bold text-red-900 leading-tight">Chaturvedi <span className="text-yellow-600">Classes</span></h1>
-                                        <p className="text-[10px] md:text-xs text-gray-500 font-semibold tracking-wider">EXCELLENCE IN EDUCATION</p>
+                                        <h1 className={`text-lg md:text-xl font-bold ${classes.brandPrimary} leading-tight`}>Chaturvedi <span className={classes.brandSecondary}>Classes</span></h1>
+                                        <p className={`text-[10px] md:text-xs ${classes.textMuted} font-semibold tracking-wider`}>EXCELLENCE IN EDUCATION</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={onBackToHome}
-                                    className="p-2 text-gray-600 hover:text-red-700 transition-colors rounded-lg hover:bg-gray-100"
+                                    className={`p-2 ${classes.textSecondary} ${classes.actionHoverText} transition-colors rounded-lg ${classes.actionHoverBg}`}
                                 >
                                     <ArrowLeft className="w-6 h-6" />
                                 </button>
@@ -2593,8 +2673,8 @@
                                 >
                                     <div
                                         className={`max-w-[80%] rounded-2xl px-4 py-3 ${msg.role === 'user'
-                                            ? 'bg-red-700 text-white'
-                                            : 'bg-white border border-gray-200 text-gray-900'
+                                            ? `${classes.primaryBg} text-white`
+                                            : `${classes.surface} ${classes.border} border ${classes.textPrimary}`
                                             }`}
                                     >
                                         <p className="text-sm md:text-base whitespace-pre-wrap break-words">{msg.content}</p>
@@ -2603,7 +2683,7 @@
                             ))}
                             {isLoading && (
                                 <div className="flex justify-start">
-                                    <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3">
+                                    <div className={`${classes.surface} ${classes.border} border rounded-2xl px-4 py-3`}>
                                         <div className="flex gap-1">
                                             <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
                                             <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
@@ -2614,7 +2694,7 @@
                             )}
                         </div>
 
-                        <div className="bg-white rounded-2xl border border-gray-200 p-3 shadow-sm flex-shrink-0 mt-auto">
+                        <div className={`${classes.surface} rounded-2xl ${classes.border} border p-3 shadow-sm flex-shrink-0 mt-auto`}>
                             <div className="flex gap-2">
                                 <input
                                     type="text"
@@ -2622,7 +2702,7 @@
                                     onChange={(e) => setInputMessage(e.target.value)}
                                     onKeyPress={handleKeyPress}
                                     placeholder="Type your question..."
-                                    className="flex-1 px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm"
+                                    className={`flex-1 px-4 py-2 ${classes.border} border ${classes.inputBg} ${classes.textPrimary} rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm`}
                                     disabled={isLoading}
                                 />
                                 <button
@@ -2644,6 +2724,7 @@
 
         // --- Notifications Screen ---
         function NotificationsScreen({ onBackToHome }) {
+            const { classes } = useTheme();
             const [notifications, setNotifications] = useState([]);
             const [isLoading, setIsLoading] = useState(true);
             const [userClass, setUserClass] = useState('');
@@ -2701,8 +2782,8 @@
             }, []);
 
             return (
-                <div className="min-h-screen flex flex-col font-sans bg-gray-50 text-gray-900">
-                    <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+                <div className={`h-screen overflow-hidden flex flex-col font-sans ${classes.background} ${classes.textPrimary}`}>
+                    <header className={`${classes.surface} ${classes.border} border-b sticky top-0 z-20 shadow-sm flex-none`}>
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                             <div className="flex justify-between items-center h-16">
                                 <div className="flex items-center gap-3 select-none">
@@ -2710,13 +2791,13 @@
                                         <img src="img/logo.png" alt="Chaturvedi Classes Logo" className="w-full h-full object-contain" />
                                     </div>
                                     <div>
-                                        <h1 className="text-lg md:text-xl font-bold text-red-900 leading-tight">Chaturvedi <span className="text-yellow-600">Classes</span></h1>
-                                        <p className="text-[10px] md:text-xs text-gray-500 font-semibold tracking-wider">EXCELLENCE IN EDUCATION</p>
+                                        <h1 className={`text-lg md:text-xl font-bold ${classes.brandPrimary} leading-tight`}>Chaturvedi <span className={classes.brandSecondary}>Classes</span></h1>
+                                        <p className={`text-[10px] md:text-xs ${classes.textMuted} font-semibold tracking-wider`}>EXCELLENCE IN EDUCATION</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={onBackToHome}
-                                    className="p-2 text-gray-600 hover:text-red-700 transition-colors rounded-lg hover:bg-gray-100"
+                                    className={`p-2 ${classes.textSecondary} ${classes.actionHoverText} transition-colors rounded-lg ${classes.actionHoverBg}`}
                                 >
                                     <ArrowLeft className="w-6 h-6" />
                                 </button>
@@ -2724,24 +2805,24 @@
                         </div>
                     </header>
 
-                    <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 overflow-y-auto">
                         {isLoading ? (
                             <div className="text-center py-12">
                                 <div className="w-12 h-12 border-4 border-red-700 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                                <p className="text-gray-600">Loading notifications...</p>
+                                <p className="text-gray-600 dark:text-gray-300">Loading notifications...</p>
                             </div>
                         ) : notifications.length === 0 ? (
                             <div className="text-center py-12">
                                 <Bell className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                                <p className="text-gray-600 text-lg">No notifications yet</p>
-                                <p className="text-gray-500 text-sm mt-2">You'll see notifications here when admin posts them</p>
+                                <p className="text-gray-600 dark:text-gray-300 text-lg">No notifications yet</p>
+                                <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">You'll see notifications here when admin posts them</p>
                             </div>
                         ) : (
                             <div className="space-y-4">
                                 {notifications.map((notification) => (
-                                    <div key={notification.id} className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow">
-                                        <h3 className="text-lg font-bold text-gray-900 mb-2">{notification.title}</h3>
-                                        <p className="text-gray-600 mb-3">{notification.message}</p>
+                                    <div key={notification.id} className={`${classes.surface} rounded-2xl ${classes.border} border p-6 shadow-sm hover:shadow-md transition-shadow`}>
+                                        <h3 className={`text-lg font-bold ${classes.textPrimary} mb-2`}>{notification.title}</h3>
+                                        <p className={`${classes.textSecondary} mb-3`}>{notification.message}</p>
                                         {notification.createdAt && (
                                             <p className="text-xs text-gray-400">
                                                 {notification.createdAt.toDate ?
@@ -2760,9 +2841,10 @@
 
         // --- Location Screen ---
         function LocationScreen({ onBackToHome }) {
+            const { classes } = useTheme();
             return (
-                <div className="min-h-screen flex flex-col font-sans bg-gray-50 text-gray-900">
-                    <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+                <div className={`h-screen overflow-hidden flex flex-col font-sans ${classes.background} ${classes.textPrimary}`}>
+                    <header className={`${classes.surface} ${classes.border} border-b sticky top-0 z-20 shadow-sm flex-none`}>
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                             <div className="flex justify-between items-center h-16">
                                 <div className="flex items-center gap-3 select-none">
@@ -2770,13 +2852,13 @@
                                         <img src="img/logo.png" alt="Chaturvedi Classes Logo" className="w-full h-full object-contain" />
                                     </div>
                                     <div>
-                                        <h1 className="text-lg md:text-xl font-bold text-red-900 leading-tight">Chaturvedi <span className="text-yellow-600">Classes</span></h1>
-                                        <p className="text-[10px] md:text-xs text-gray-500 font-semibold tracking-wider">EXCELLENCE IN EDUCATION</p>
+                                        <h1 className={`text-lg md:text-xl font-bold ${classes.brandPrimary} leading-tight`}>Chaturvedi <span className={classes.brandSecondary}>Classes</span></h1>
+                                        <p className={`text-[10px] md:text-xs ${classes.textMuted} font-semibold tracking-wider`}>EXCELLENCE IN EDUCATION</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={onBackToHome}
-                                    className="p-2 text-gray-600 hover:text-red-700 transition-colors rounded-lg hover:bg-gray-100"
+                                    className={`p-2 ${classes.textSecondary} ${classes.actionHoverText} transition-colors rounded-lg ${classes.actionHoverBg}`}
                                 >
                                     <ArrowLeft className="w-6 h-6" />
                                 </button>
@@ -2784,8 +2866,8 @@
                         </div>
                     </header>
 
-                    <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                    <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 overflow-y-auto">
+                        <div className={`${classes.surface} rounded-2xl ${classes.border} border shadow-sm overflow-hidden`}>
                             <div className="w-full" style={{ height: '450px' }}>
                                 <iframe
                                     src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3679.7909936864025!2d77.7220828!3d22.736008599999998!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x397dcf4f083c154b%3A0xa6215fa845fa456!2spradhan%20mantri%20jan%20aushadhi%20kendra!5e0!3m2!1sen!2sin!4v1764523816489!5m2!1sen!2sin"
@@ -2816,30 +2898,15 @@
 
         // --- Settings Screen ---
         function SettingsScreen({ onBackToHome, onLogout }) {
-            const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
+            const { theme, setMode, classes } = useTheme();
             const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+            const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+            const [emailInput, setEmailInput] = useState('');
+            const [deleteType, setDeleteType] = useState('profile');
             const appVersion = '1.0';
 
-            useEffect(() => {
-                // Apply theme on mount
-                applyTheme(theme);
-            }, [theme]);
-
-            const applyTheme = (newTheme) => {
-                const root = document.documentElement;
-                if (newTheme === 'dark') {
-                    root.classList.add('dark');
-                    document.body.classList.add('dark-mode');
-                } else {
-                    root.classList.remove('dark');
-                    document.body.classList.remove('dark-mode');
-                }
-            };
-
             const handleThemeChange = (newTheme) => {
-                setTheme(newTheme);
-                localStorage.setItem('theme', newTheme);
-                applyTheme(newTheme);
+                setMode(newTheme);
             };
 
             const handleDeleteAllData = async (userEmail) => {
@@ -2961,18 +3028,18 @@
             };
 
             return (
-                <div className="h-screen flex flex-col font-sans bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-hidden">
-                    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-20 shadow-sm flex-shrink-0">
+                <div className={`h-screen flex flex-col font-sans ${classes.background} ${classes.textPrimary} overflow-hidden`}>
+                    <header className={`${classes.surface} ${classes.border} border-b sticky top-0 z-20 shadow-sm flex-shrink-0`}>
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                             <div className="flex justify-between items-center h-16">
                                 <div className="flex items-center gap-3">
                                     <button
                                         onClick={onBackToHome}
-                                        className="p-2 text-gray-600 dark:text-gray-300 hover:text-red-700 dark:hover:text-red-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        className={`p-2 ${classes.textSecondary} ${classes.actionHoverText} transition-colors rounded-lg ${classes.actionHoverBg}`}
                                     >
                                         <ArrowLeft className="w-6 h-6" />
                                     </button>
-                                    <h1 className="text-xl font-bold text-red-900 dark:text-red-400">Settings</h1>
+                                    <h1 className={`text-xl font-bold ${classes.brandPrimary}`}>Settings</h1>
                                 </div>
                             </div>
                         </div>
@@ -2981,15 +3048,15 @@
                     <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
                         <div className="space-y-6">
                             {/* Theme Settings */}
-                            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
-                                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Appearance</h2>
+                            <div className={`${classes.surface} rounded-xl ${classes.border} border p-5 shadow-sm`}>
+                                <h2 className={`text-lg font-semibold ${classes.textPrimary} mb-4`}>Appearance</h2>
                                 <div className="space-y-3">
                                     <button
                                         onClick={() => handleThemeChange('light')}
                                         className={`w-full flex items-center justify-between p-4 rounded-lg border-2 transition-all ${
                                             theme === 'light'
-                                                ? 'border-red-700 bg-red-50'
-                                                : 'border-gray-200 hover:border-gray-300'
+                                                ? `border-red-700 ${classes.navItemActiveBg}`
+                                                : `${classes.border} ${classes.actionHoverBorder}`
                                         }`}
                                     >
                                         <div className="flex items-center gap-3">
@@ -2999,8 +3066,8 @@
                                                 </svg>
                                             </div>
                                             <div className="text-left">
-                                                <div className="font-medium text-gray-900">Light Mode</div>
-                                                <div className="text-sm text-gray-500">Default appearance</div>
+                                                <div className={`font-medium ${classes.textPrimary}`}>Light Mode</div>
+                                                <div className={`text-sm ${classes.textMuted}`}>Default appearance</div>
                                             </div>
                                         </div>
                                         {theme === 'light' && (
@@ -3014,8 +3081,8 @@
                                         onClick={() => handleThemeChange('dark')}
                                         className={`w-full flex items-center justify-between p-4 rounded-lg border-2 transition-all ${
                                             theme === 'dark'
-                                                ? 'border-red-700 dark:border-red-600 bg-red-50 dark:bg-red-900/20'
-                                                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                                                ? `border-red-700 dark:border-red-600 ${classes.navItemActiveBg}`
+                                                : `${classes.border} ${classes.actionHoverBorder}`
                                         }`}
                                     >
                                         <div className="flex items-center gap-3">
@@ -3025,8 +3092,8 @@
                                                 </svg>
                                             </div>
                                             <div className="text-left">
-                                                <div className="font-medium text-gray-900 dark:text-gray-100">Dark Mode</div>
-                                                <div className="text-sm text-gray-500 dark:text-gray-400">Easier on the eyes</div>
+                                                <div className={`font-medium ${classes.textPrimary}`}>Dark Mode</div>
+                                                <div className={`text-sm ${classes.textMuted}`}>Easier on the eyes</div>
                                             </div>
                                         </div>
                                         {theme === 'dark' && (
@@ -3039,8 +3106,8 @@
                             </div>
 
                             {/* Account Actions */}
-                            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
-                                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Account</h2>
+                            <div className={`${classes.surface} rounded-xl border ${classes.border} p-5 shadow-sm`}>
+                                <h2 className={`text-lg font-semibold ${classes.textPrimary} mb-4`}>Account</h2>
                                 <div className="space-y-3">
                                     <button
                                         onClick={() => {
@@ -3090,15 +3157,15 @@
                             </div>
 
                             {/* App Info */}
-                            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
-                                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">About</h2>
+                            <div className={`${classes.surface} rounded-xl border ${classes.border} p-5 shadow-sm`}>
+                                <h2 className={`text-lg font-semibold ${classes.textPrimary} mb-4`}>About</h2>
                                 <div className="space-y-3">
-                                    <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
+                                    <div className={`flex items-center justify-between p-3 rounded-lg ${classes.surfaceHighlight}`}>
                                         <div className="flex items-center gap-3">
                                             <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
-                                            <span className="font-medium text-gray-700 dark:text-gray-200">App Version</span>
+                                            <span className={`font-medium ${classes.textSecondary}`}>App Version</span>
                                         </div>
                                         <span className="text-sm font-semibold text-red-700 dark:text-red-400">{appVersion}</span>
                                     </div>
@@ -3109,8 +3176,8 @@
 
                     {/* Delete Profile Confirmation Modal */}
                     {showDeleteConfirm && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+                        <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${classes.backdrop} backdrop-blur-sm`}>
+                            <div className={`${classes.surface} rounded-2xl p-6 max-w-md w-full shadow-2xl`}>
                                 <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Delete Profile</h3>
                                 <p className="text-gray-600 dark:text-gray-300 mb-4">Are you sure you want to delete your profile? This will remove your account and all associated data. This action cannot be undone.</p>
                                 <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Enter your email to confirm:</p>
@@ -3149,8 +3216,8 @@
 
                     {/* Delete All Data Confirmation Modal */}
                     {showDeleteAllConfirm && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+                        <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${classes.backdrop} backdrop-blur-sm`}>
+                            <div className={`${classes.surface} rounded-2xl p-6 max-w-md w-full shadow-2xl`}>
                                 <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Delete All Data</h3>
                                 <p className="text-gray-600 dark:text-gray-300 mb-4">Are you sure you want to delete all app data? This will remove everything including your profile, settings, and all stored data. This action cannot be undone.</p>
                                 <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Enter your email to confirm:</p>
@@ -3192,6 +3259,7 @@
 
         // --- All Classes Screen (Sample Papers) ---
         function AllClassesScreen({ onBackToHome }) {
+            const { classes } = useTheme();
             const [selectedClass, setSelectedClass] = useState('');
             const [userClass, setUserClass] = useState('');
             const [searchQuery, setSearchQuery] = useState("");
@@ -3276,8 +3344,8 @@
             ) || [];
 
             return (
-                <div className="min-h-screen flex flex-col font-sans bg-gray-50 text-gray-900">
-                    <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+                <div className={`h-screen overflow-hidden flex flex-col font-sans ${classes.background} ${classes.textPrimary}`}>
+                    <header className={`${classes.surface} ${classes.border} border-b sticky top-0 z-20 shadow-sm`}>
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                             <div className="flex justify-between items-center h-16">
                                 <div className="flex items-center gap-3 select-none">
@@ -3285,13 +3353,13 @@
                                         <img src="img/logo.png" alt="Chaturvedi Classes Logo" className="w-full h-full object-contain" />
                                     </div>
                                     <div>
-                                        <h1 className="text-lg md:text-xl font-bold text-red-900 leading-tight">Chaturvedi <span className="text-yellow-600">Classes</span></h1>
-                                        <p className="text-[10px] md:text-xs text-gray-500 font-semibold tracking-wider">EXCELLENCE IN EDUCATION</p>
+                                        <h1 className={`text-lg md:text-xl font-bold ${classes.brandPrimary} leading-tight`}>Chaturvedi <span className={classes.brandSecondary}>Classes</span></h1>
+                                        <p className={`text-[10px] md:text-xs ${classes.textMuted} font-semibold tracking-wider`}>EXCELLENCE IN EDUCATION</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={onBackToHome}
-                                    className="p-2 text-gray-600 hover:text-red-700 transition-colors rounded-lg hover:bg-gray-100"
+                                    className={`p-2 ${classes.textSecondary} ${classes.actionHoverText} transition-colors rounded-lg ${classes.actionHoverBg}`}
                                 >
                                     <ArrowLeft className="w-6 h-6" />
                                 </button>
@@ -3299,9 +3367,9 @@
                         </div>
                     </header>
 
-                    <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+                    <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 overflow-y-auto">
                         <div className="mb-4 animate-in fade-in slide-in-from-top-4 duration-500">
-                            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Select Class</h2>
+                            <h2 className={`text-xs font-bold ${classes.textMuted} uppercase tracking-widest mb-2`}>Select Class</h2>
                             <div className="flex flex-nowrap overflow-x-auto pb-2 md:pb-0 gap-2 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
                                 {[9, 10, 11, 12].map((cls) => (
                                     <button
@@ -3309,7 +3377,7 @@
                                         onClick={() => setSelectedClass(cls.toString())}
                                         className={`flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all duration-300 border ${selectedClass === cls.toString()
                                             ? 'bg-yellow-400 text-red-900 border-yellow-500 shadow-lg shadow-yellow-200 scale-105'
-                                            : 'bg-white text-gray-600 border-gray-200 hover:border-yellow-300 hover:bg-yellow-50'
+                                            : `${classes.surface} ${classes.textSecondary} ${classes.border} ${classes.actionHoverBorder} ${classes.actionHoverBg}`
                                             }`}
                                     >
                                         <GraduationCap className={`w-5 h-5 ${selectedClass === cls.toString() ? 'text-red-900' : 'text-gray-400'}`} />
@@ -3323,17 +3391,17 @@
                             <div className="animate-in fade-in slide-in-from-bottom-8 duration-500">
                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                                     <div>
-                                        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">
-                                            Class {selectedClass} <span className="text-red-700">Sample Papers</span>
+                                        <h2 className={`text-2xl md:text-3xl font-bold ${classes.textPrimary} mb-1`}>
+                                            Class {selectedClass} <span className={classes.primaryText}>Sample Papers</span>
                                         </h2>
-                                        <p className="text-gray-500 text-sm">Download official CBSE sample papers</p>
+                                        <p className={`${classes.textSecondary} text-sm`}>Download official CBSE sample papers</p>
                                     </div>
                                     <div className="relative w-full md:w-72">
                                         <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                                         <input
                                             type="text"
                                             placeholder="Search papers..."
-                                            className="w-full bg-white pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all shadow-sm"
+                                            className={`w-full ${classes.inputBg} pl-10 pr-4 py-3 border ${classes.border} rounded-xl ${classes.textPrimary} ${classes.inputPlaceholder} focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all shadow-sm`}
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
                                         />
@@ -3342,14 +3410,14 @@
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {filteredPapers.map((paper, index) => (
-                                        <div key={index} className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
+                                        <div key={index} className={`${classes.surface} rounded-2xl border ${classes.border} p-6 hover:shadow-lg transition-shadow`}>
                                             <div className="flex items-center gap-3 mb-3">
-                                                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                                                    <FileText className="w-6 h-6 text-blue-700" />
+                                                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+                                                    <FileText className="w-6 h-6 text-blue-700 dark:text-blue-400" />
                                                 </div>
                                                 <div className="flex-1">
-                                                    <h4 className="font-semibold text-gray-900">{paper.subject}</h4>
-                                                    <p className="text-sm text-gray-600">{paper.title}</p>
+                                                    <h4 className="font-semibold text-gray-900 dark:text-gray-100">{paper.subject}</h4>
+                                                    <p className="text-sm text-gray-600 dark:text-gray-400">{paper.title}</p>
                                                 </div>
                                             </div>
                                             <button
@@ -3376,6 +3444,7 @@
 
         // --- PYQ Screen (Previous Year Questions) ---
         function PYQScreen({ onBackToHome }) {
+            const { classes } = useTheme();
             const [selectedClass, setSelectedClass] = useState('');
             const [userClass, setUserClass] = useState('');
             const [searchQuery, setSearchQuery] = useState("");
@@ -3465,8 +3534,8 @@
             ) || [];
 
             return (
-                <div className="min-h-screen flex flex-col font-sans bg-gray-50 text-gray-900">
-                    <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+                <div className={`h-screen overflow-hidden flex flex-col font-sans ${classes.background} ${classes.textPrimary}`}>
+                    <header className={`${classes.surface} ${classes.border} border-b sticky top-0 z-20 shadow-sm`}>
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                             <div className="flex justify-between items-center h-16">
                                 <div className="flex items-center gap-3 select-none">
@@ -3474,13 +3543,13 @@
                                         <img src="img/logo.png" alt="Chaturvedi Classes Logo" className="w-full h-full object-contain" />
                                     </div>
                                     <div>
-                                        <h1 className="text-lg md:text-xl font-bold text-red-900 leading-tight">Chaturvedi <span className="text-yellow-600">Classes</span></h1>
-                                        <p className="text-[10px] md:text-xs text-gray-500 font-semibold tracking-wider">EXCELLENCE IN EDUCATION</p>
+                                        <h1 className={`text-lg md:text-xl font-bold ${classes.brandPrimary} leading-tight`}>Chaturvedi <span className={classes.brandSecondary}>Classes</span></h1>
+                                        <p className={`text-[10px] md:text-xs ${classes.textMuted} font-semibold tracking-wider`}>EXCELLENCE IN EDUCATION</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={onBackToHome}
-                                    className="p-2 text-gray-600 hover:text-red-700 transition-colors rounded-lg hover:bg-gray-100"
+                                    className={`p-2 ${classes.textSecondary} ${classes.actionHoverText} transition-colors rounded-lg ${classes.actionHoverBg}`}
                                 >
                                     <ArrowLeft className="w-6 h-6" />
                                 </button>
@@ -3488,9 +3557,9 @@
                         </div>
                     </header>
 
-                    <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+                    <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 overflow-y-auto">
                         <div className="mb-4 animate-in fade-in slide-in-from-top-4 duration-500">
-                            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Select Class</h2>
+                            <h2 className={`text-xs font-bold ${classes.textMuted} uppercase tracking-widest mb-2`}>Select Class</h2>
                             <div className="flex flex-nowrap overflow-x-auto pb-2 md:pb-0 gap-2 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
                                 {[9, 10, 11, 12].map((cls) => (
                                     <button
@@ -3498,7 +3567,7 @@
                                         onClick={() => setSelectedClass(cls.toString())}
                                         className={`flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all duration-300 border ${selectedClass === cls.toString()
                                             ? 'bg-yellow-400 text-red-900 border-yellow-500 shadow-lg shadow-yellow-200 scale-105'
-                                            : 'bg-white text-gray-600 border-gray-200 hover:border-yellow-300 hover:bg-yellow-50'
+                                            : `${classes.surface} ${classes.textSecondary} ${classes.border} ${classes.actionHoverBorder} ${classes.actionHoverBg}`
                                             }`}
                                     >
                                         <GraduationCap className={`w-5 h-5 ${selectedClass === cls.toString() ? 'text-red-900' : 'text-gray-400'}`} />
@@ -3512,17 +3581,17 @@
                             <div className="animate-in fade-in slide-in-from-bottom-8 duration-500">
                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                                     <div>
-                                        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">
-                                            Class {selectedClass} <span className="text-red-700">PYPs</span>
+                                        <h2 className={`text-2xl md:text-3xl font-bold ${classes.textPrimary} mb-1`}>
+                                            Class {selectedClass} <span className={classes.primaryText}>PYPs</span>
                                         </h2>
-                                        <p className="text-gray-500 text-sm">Download Previous Year Question Papers</p>
+                                        <p className={`${classes.textSecondary} text-sm`}>Download Previous Year Question Papers</p>
                                     </div>
                                     <div className="relative w-full md:w-72">
                                         <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                                         <input
                                             type="text"
                                             placeholder="Search papers..."
-                                            className="w-full bg-white pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all shadow-sm"
+                                            className={`w-full ${classes.inputBg} pl-10 pr-4 py-3 border ${classes.border} rounded-xl ${classes.textPrimary} ${classes.inputPlaceholder} focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all shadow-sm`}
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
                                         />
@@ -3531,15 +3600,15 @@
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {filteredPapers.map((paper, index) => (
-                                        <div key={index} className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
+                                        <div key={index} className={`${classes.surface} rounded-2xl border ${classes.border} p-6 hover:shadow-lg transition-shadow`}>
                                             <div className="flex items-center gap-3 mb-3">
-                                                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                                                    <FileText className="w-6 h-6 text-green-700" />
+                                                <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
+                                                    <FileText className="w-6 h-6 text-green-700 dark:text-green-400" />
                                                 </div>
                                                 <div className="flex-1">
-                                                    <h4 className="font-semibold text-gray-900">{paper.subject}</h4>
-                                                    <p className="text-sm text-gray-600">{paper.title}</p>
-                                                    <span className="inline-block mt-1 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-md font-medium">
+                                                    <h4 className="font-semibold text-gray-900 dark:text-gray-100">{paper.subject}</h4>
+                                                    <p className="text-sm text-gray-600 dark:text-gray-400">{paper.title}</p>
+                                                    <span className="inline-block mt-1 px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs rounded-md font-medium">
                                                         {paper.year}
                                                     </span>
                                                 </div>
@@ -3568,9 +3637,10 @@
 
         // --- AI Study Mind Map Component ---
         function AIStudyMindMap({ onBackToHome }) {
+            const { classes } = useTheme();
             return (
-                <div className="min-h-screen flex flex-col font-sans bg-gray-50 text-gray-900">
-                    <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+                <div className={`h-screen overflow-hidden flex flex-col font-sans ${classes.background} ${classes.textPrimary}`}>
+                    <header className={`${classes.surface} ${classes.border} border-b sticky top-0 z-20 shadow-sm`}>
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                             <div className="flex justify-between items-center h-16">
                                 <div className="flex items-center gap-3 select-none">
@@ -3578,13 +3648,13 @@
                                         <img src="img/logo.png" alt="Chaturvedi Classes Logo" className="w-full h-full object-contain" />
                                     </div>
                                     <div>
-                                        <h1 className="text-lg md:text-xl font-bold text-red-900 leading-tight">Chaturvedi <span className="text-yellow-600">Classes</span></h1>
-                                        <p className="text-[10px] md:text-xs text-gray-500 font-semibold tracking-wider">EXCELLENCE IN EDUCATION</p>
+                                        <h1 className={`text-lg md:text-xl font-bold ${classes.brandPrimary} leading-tight`}>Chaturvedi <span className={classes.brandSecondary}>Classes</span></h1>
+                                        <p className={`text-[10px] md:text-xs ${classes.textMuted} font-semibold tracking-wider`}>EXCELLENCE IN EDUCATION</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={onBackToHome}
-                                    className="p-2 text-gray-600 hover:text-red-700 transition-colors rounded-lg hover:bg-gray-100"
+                                    className={`p-2 ${classes.textSecondary} ${classes.actionHoverText} transition-colors rounded-lg ${classes.actionHoverBg}`}
                                 >
                                     <ArrowLeft className="w-6 h-6" />
                                 </button>
@@ -3593,12 +3663,7 @@
                     </header>
 
                     <main className="flex-1 w-full relative h-[calc(100vh-4rem)]">
-                        <iframe
-                            src="https://aigeneratormind.netlify.app/"
-                            className="w-full h-full border-0 absolute inset-0"
-                            title="AI Mind Map Generator"
-                            allowFullScreen
-                        />
+                        {/* Iframe is now handled globally in App component for background loading */}
                     </main>
                 </div>
             );
@@ -3606,6 +3671,7 @@
 
         // --- All Features Screen ---
         function AllFeatures({ onBackToHome, onNavigateToLibrary, onNavigateToAllClasses, onNavigateToPYQ, onNavigateToMindMap }) {
+            const { classes } = useTheme();
             const [searchQuery, setSearchQuery] = useState("");
 
             const features = [
@@ -3615,12 +3681,12 @@
                     description: 'Access official NCERT textbooks for all classes',
                     icon: Book,
                     colorTheme: {
-                        bg: 'from-red-50 to-yellow-50',
-                        border: 'border-red-100',
-                        hoverBorder: 'hover:border-red-400',
-                        iconColor: 'text-red-700',
-                        circle1: 'bg-red-200/20',
-                        circle2: 'bg-yellow-200/20'
+                        bg: 'from-red-50 to-yellow-50 dark:from-red-900/10 dark:to-yellow-900/10',
+                        border: 'border-red-100 dark:border-red-900/20',
+                        hoverBorder: 'hover:border-red-400 dark:hover:border-red-600',
+                        iconColor: 'text-red-700 dark:text-red-400',
+                        circle1: 'bg-red-200/20 dark:bg-red-500/10',
+                        circle2: 'bg-yellow-200/20 dark:bg-yellow-500/10'
                     },
                     onClick: onNavigateToLibrary
                 },
@@ -3630,12 +3696,12 @@
                     description: 'Practice with latest CBSE sample papers',
                     icon: GraduationCap,
                     colorTheme: {
-                        bg: 'from-blue-50 to-indigo-50',
-                        border: 'border-blue-100',
-                        hoverBorder: 'hover:border-blue-400',
-                        iconColor: 'text-blue-700',
-                        circle1: 'bg-blue-200/20',
-                        circle2: 'bg-indigo-200/20'
+                        bg: 'from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20',
+                        border: 'border-blue-100 dark:border-blue-900/30',
+                        hoverBorder: 'hover:border-blue-400 dark:hover:border-blue-500',
+                        iconColor: 'text-blue-700 dark:text-blue-400',
+                        circle1: 'bg-blue-200/20 dark:bg-blue-500/20',
+                        circle2: 'bg-indigo-200/20 dark:bg-indigo-500/20'
                     },
                     onClick: onNavigateToAllClasses
                 },
@@ -3645,12 +3711,12 @@
                     description: 'Download past year question papers for exam prep',
                     icon: FileText,
                     colorTheme: {
-                        bg: 'from-green-50 to-emerald-50',
-                        border: 'border-green-100',
-                        hoverBorder: 'hover:border-green-400',
-                        iconColor: 'text-green-700',
-                        circle1: 'bg-green-200/20',
-                        circle2: 'bg-emerald-200/20'
+                        bg: 'from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20',
+                        border: 'border-green-100 dark:border-green-900/30',
+                        hoverBorder: 'hover:border-green-400 dark:hover:border-green-500',
+                        iconColor: 'text-green-700 dark:text-green-400',
+                        circle1: 'bg-green-200/20 dark:bg-green-500/20',
+                        circle2: 'bg-emerald-200/20 dark:bg-emerald-500/20'
                     },
                     onClick: onNavigateToPYQ
                 },
@@ -3660,12 +3726,12 @@
                     description: 'Generate visual study aids for any topic',
                     icon: Network,
                     colorTheme: {
-                        bg: 'from-purple-50 to-pink-50',
-                        border: 'border-purple-100',
-                        hoverBorder: 'hover:border-purple-400',
-                        iconColor: 'text-purple-700',
-                        circle1: 'bg-purple-200/20',
-                        circle2: 'bg-pink-200/20'
+                        bg: 'from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20',
+                        border: 'border-purple-100 dark:border-purple-900/30',
+                        hoverBorder: 'hover:border-purple-400 dark:hover:border-purple-500',
+                        iconColor: 'text-purple-700 dark:text-purple-400',
+                        circle1: 'bg-purple-200/20 dark:bg-purple-500/20',
+                        circle2: 'bg-pink-200/20 dark:bg-pink-500/20'
                     },
                     onClick: onNavigateToMindMap
                 }
@@ -3677,8 +3743,8 @@
             );
 
             return (
-                <div className="min-h-screen flex flex-col font-sans bg-gray-50 text-gray-900">
-                    <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+                <div className={`h-screen overflow-hidden flex flex-col font-sans ${classes.background} ${classes.textPrimary}`}>
+                    <header className={`${classes.surface} ${classes.border} border-b sticky top-0 z-20 shadow-sm`}>
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                             <div className="flex justify-between items-center h-16">
                                 <div className="flex items-center gap-3 select-none">
@@ -3686,13 +3752,13 @@
                                         <img src="img/logo.png" alt="Chaturvedi Classes Logo" className="w-full h-full object-contain" />
                                     </div>
                                     <div>
-                                        <h1 className="text-lg md:text-xl font-bold text-red-900 leading-tight">Chaturvedi <span className="text-yellow-600">Classes</span></h1>
-                                        <p className="text-[10px] md:text-xs text-gray-500 font-semibold tracking-wider">EXCELLENCE IN EDUCATION</p>
+                                        <h1 className={`text-lg md:text-xl font-bold ${classes.brandPrimary} leading-tight`}>Chaturvedi <span className={classes.brandSecondary}>Classes</span></h1>
+                                        <p className={`text-[10px] md:text-xs ${classes.textMuted} font-semibold tracking-wider`}>EXCELLENCE IN EDUCATION</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={onBackToHome}
-                                    className="p-2 text-gray-600 hover:text-red-700 transition-colors rounded-lg hover:bg-gray-100"
+                                    className={`p-2 ${classes.textSecondary} ${classes.actionHoverText} transition-colors rounded-lg ${classes.actionHoverBg}`}
                                 >
                                     <ArrowLeft className="w-6 h-6" />
                                 </button>
@@ -3700,14 +3766,14 @@
                         </div>
                     </header>
 
-                    <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 overflow-y-auto">
                         {/* Search Bar */}
                         <div className="mb-8 relative max-w-2xl mx-auto">
                             <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                             <input
                                 type="text"
                                 placeholder="Search tools and resources..."
-                                className="w-full bg-white pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all shadow-sm"
+                                className={`w-full ${classes.inputBg} pl-10 pr-4 py-3 border ${classes.border} rounded-xl ${classes.textPrimary} ${classes.inputPlaceholder} focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all shadow-sm`}
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
@@ -3718,19 +3784,19 @@
                                 <div
                                     key={feature.id}
                                     onClick={feature.onClick}
-                                    className={`bg-gradient-to-br ${feature.colorTheme.bg} rounded-2xl border ${feature.colorTheme.border} p-4 hover:shadow-xl hover:shadow-gray-200/50 ${feature.colorTheme.hoverBorder} transition-all duration-300 cursor-pointer group relative overflow-hidden h-full`}
+                                    className={`bg-gradient-to-br ${feature.colorTheme.bg} rounded-2xl border ${feature.colorTheme.border} p-4 hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-none ${feature.colorTheme.hoverBorder} transition-all duration-300 cursor-pointer group relative overflow-hidden h-full`}
                                 >
                                     <div className={`absolute top-0 right-0 w-20 h-20 ${feature.colorTheme.circle1} rounded-full -mr-10 -mt-10`}></div>
                                     <div className={`absolute bottom-0 left-0 w-16 h-16 ${feature.colorTheme.circle2} rounded-full -ml-8 -mb-8`}></div>
 
                                     <div className="relative z-10 flex items-center justify-between h-full">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-sm">
+                                            <div className={`w-12 h-12 ${classes.surface} rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform shadow-sm`}>
                                                 <feature.icon className={`w-6 h-6 ${feature.colorTheme.iconColor}`} />
                                             </div>
                                             <div>
-                                                <h3 className="text-base font-medium text-gray-900 mb-0.5">{feature.title}</h3>
-                                                <p className="text-xs text-gray-600 leading-tight">{feature.description}</p>
+                                                <h3 className={`text-base font-medium ${classes.textPrimary} mb-0.5`}>{feature.title}</h3>
+                                                <p className={`text-xs ${classes.textSecondary} leading-tight`}>{feature.description}</p>
                                             </div>
                                         </div>
                                         <ChevronRight className={`w-5 h-5 text-gray-400 group-hover:${feature.colorTheme.iconColor} group-hover:translate-x-1 transition-all flex-shrink-0 ml-2`} />
@@ -3740,7 +3806,7 @@
                         </div>
 
                         {filteredFeatures.length === 0 && (
-                            <div className="text-center py-12 text-gray-500">
+                            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
                                 No tools found matching "{searchQuery}"
                             </div>
                         )}
@@ -3751,6 +3817,7 @@
 
         // --- NCERT Library Component (Existing Code - Unchanged) ---
         function NCERTLibrary({ onBackToHome }) {
+            const { classes } = useTheme();
             const [selectedClass, setSelectedClass] = useState(10);
             const [selectedBook, setSelectedBook] = useState(null);
             const [searchQuery, setSearchQuery] = useState("");
@@ -3811,10 +3878,25 @@
                 return book.chapters ? book.chapters.length : book.count;
             };
 
+            // Helper for dynamic colors (backgrounds are usually hardcoded in Tailwind safelist or should be mapped)
+            // Just mapping 'red', 'blue' etc to classes
+            const COLOR_MAP = {
+                "red": "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+                "blue": "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+                "green": "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+                "yellow": "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+                "purple": "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+                "orange": "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+                "pink": "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400",
+                "indigo": "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400",
+                "teal": "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400",
+                "cyan": "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400"
+            };
+
             return (
-                <div className="min-h-screen flex flex-col font-sans bg-gray-50 text-gray-900">
+                <div className={`h-screen overflow-hidden flex flex-col font-sans ${classes.background} ${classes.textPrimary}`}>
                     {/* Header - Optimized for Mobile */}
-                    <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+                    <header className={`${classes.surface} ${classes.border} border-b sticky top-0 z-20 shadow-sm`}>
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                             <div className="flex justify-between items-center h-16">
                                 <div className="flex items-center gap-3 select-none">
@@ -3823,8 +3905,8 @@
                                         <img src="img/logo.png" alt="Chaturvedi Classes Logo" className="w-full h-full object-contain" />
                                     </div>
                                     <div>
-                                        <h1 className="text-lg md:text-xl font-bold text-red-900 leading-tight">Chaturvedi <span className="text-yellow-600">Classes</span></h1>
-                                        <p className="text-[10px] md:text-xs text-gray-500 font-semibold tracking-wider">EXCELLENCE IN EDUCATION</p>
+                                        <h1 className={`text-lg md:text-xl font-bold ${classes.brandPrimary} leading-tight`}>Chaturvedi <span className={classes.brandSecondary}>Classes</span></h1>
+                                        <p className={`text-[10px] md:text-xs ${classes.textMuted} font-semibold tracking-wider`}>EXCELLENCE IN EDUCATION</p>
                                     </div>
                                 </div>
 
@@ -3832,7 +3914,7 @@
                                 <div className="hidden md:flex items-center gap-6">
                                     <button
                                         onClick={onBackToHome}
-                                        className="text-gray-600 hover:text-red-700 font-medium text-sm transition-colors"
+                                        className={`${classes.textSecondary} ${classes.actionHoverText} font-medium text-sm transition-colors`}
                                     >
                                         Home
                                     </button>
@@ -3841,7 +3923,7 @@
                                 {/* Mobile Back Button */}
                                 <button
                                     onClick={onBackToHome}
-                                    className="md:hidden text-gray-600 hover:text-red-700 transition-colors"
+                                    className={`md:hidden ${classes.textSecondary} ${classes.actionHoverText} transition-colors p-1 rounded-lg ${classes.actionHoverBg}`}
                                 >
                                     <ArrowLeft className="w-6 h-6" />
                                 </button>
@@ -3849,12 +3931,12 @@
                         </div>
                     </header>
 
-                    <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+                    <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 overflow-y-auto">
 
                         {/* Class Selector - Horizontal Scroll on Mobile */}
                         {!selectedBook && (
                             <div className="mb-4 animate-in fade-in slide-in-from-top-4 duration-500">
-                                <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Select Class</h2>
+                                <h2 className={`text-xs font-bold ${classes.textMuted} uppercase tracking-widest mb-2`}>Select Class</h2>
                                 <div className="flex flex-nowrap overflow-x-auto pb-2 md:pb-0 gap-2 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
                                     {[9, 10, 11, 12].map((cls) => (
                                         <button
@@ -3862,7 +3944,7 @@
                                             onClick={() => handleClassChange(cls)}
                                             className={`flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all duration-300 border ${selectedClass === cls
                                                 ? 'bg-yellow-400 text-red-900 border-yellow-500 shadow-lg shadow-yellow-200 scale-105'
-                                                : 'bg-white text-gray-600 border-gray-200 hover:border-yellow-300 hover:bg-yellow-50'
+                                                : `${classes.surface} ${classes.textSecondary} ${classes.border} ${classes.actionHoverBorder} ${classes.actionHoverBg}`
                                                 }`}
                                         >
                                             <GraduationCap className={`w-5 h-5 ${selectedClass === cls ? 'text-red-900' : 'text-gray-400'}`} />
@@ -3879,17 +3961,17 @@
                                 {/* Search Bar Area */}
                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                                     <div>
-                                        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">
-                                            Class {selectedClass} <span className="text-red-700">Library</span>
+                                        <h2 className={`text-2xl md:text-3xl font-bold ${classes.textPrimary} mb-1`}>
+                                            Class {selectedClass} <span className={classes.primaryText}>Library</span>
                                         </h2>
-                                        <p className="text-gray-500 text-sm">Select a subject to begin learning</p>
+                                        <p className={`${classes.textSecondary} text-sm`}>Select a subject to begin learning</p>
                                     </div>
                                     <div className="relative w-full md:w-72">
                                         <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                                         <input
                                             type="text"
                                             placeholder="Search subjects..."
-                                            className="w-full bg-white pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all shadow-sm"
+                                            className={`w-full ${classes.inputBg} pl-10 pr-4 py-3 border ${classes.border} rounded-xl ${classes.textPrimary} ${classes.inputPlaceholder} focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all shadow-sm`}
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
                                         />
@@ -3902,18 +3984,18 @@
                                         <div
                                             key={book.code}
                                             onClick={() => setSelectedBook(book)}
-                                            className="group bg-white rounded-2xl border border-gray-200 p-5 md:p-6 hover:shadow-xl hover:shadow-gray-200/50 hover:border-yellow-400 transition-all duration-300 cursor-pointer flex flex-col items-start relative overflow-hidden"
+                                            className={`${classes.surface} rounded-2xl border ${classes.border} p-5 md:p-6 hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-none hover:border-yellow-400 dark:hover:border-yellow-500 transition-all duration-300 cursor-pointer flex flex-col items-start relative overflow-hidden`}
                                         >
                                             {/* Card Content */}
                                             <div className={`p-4 rounded-xl mb-4 ${COLOR_MAP[book.cover]} bg-opacity-30`}>
                                                 <Book className="w-8 h-8" />
                                             </div>
-                                            <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-2 group-hover:text-red-700 transition-colors">{book.title}</h3>
-                                            <p className="text-sm text-gray-500 mb-6">{getChapterCount(book)} Chapters</p>
+                                            <h3 className={`text-lg md:text-xl font-bold ${classes.textPrimary} mb-2 group-hover:text-red-700 dark:group-hover:text-red-400 transition-colors`}>{book.title}</h3>
+                                            <p className={`text-sm ${classes.textSecondary} mb-6`}>{getChapterCount(book)} Chapters</p>
 
-                                            <div className="w-full mt-auto pt-4 border-t border-gray-100 flex justify-between items-center text-sm font-semibold text-red-700">
+                                            <div className="w-full mt-auto pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center text-sm font-semibold text-red-700 dark:text-red-400">
                                                 <span>Open Book</span>
-                                                <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center group-hover:bg-red-100 transition-colors">
+                                                <div className="w-8 h-8 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center group-hover:bg-red-100 dark:group-hover:bg-red-900/40 transition-colors">
                                                     <ChevronRight className="w-4 h-4" />
                                                 </div>
                                             </div>
@@ -3925,21 +4007,21 @@
                             <div className="animate-in fade-in slide-in-from-right-8 duration-500">
                                 {/* Book Header */}
                                 <div className="mb-6 md:mb-8">
-                                    <button
-                                        onClick={() => setSelectedBook(null)}
-                                        className="flex items-center gap-2 text-gray-500 hover:text-red-700 mb-4 transition-colors group font-medium"
-                                    >
-                                        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                                        Back to Library
-                                    </button>
-                                    <div className="flex items-start justify-between bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                                        <div>
-                                            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{selectedBook.title}</h2>
-                                            <div className="flex items-center gap-2">
-                                                <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded">CLASS {selectedClass}</span>
-                                                <span className="text-gray-500 text-sm">NCERT Official Edition</span>
+                                        <button
+                                            onClick={() => setSelectedBook(null)}
+                                            className={`flex items-center gap-2 ${classes.textSecondary} hover:${classes.primaryText} mb-4 transition-colors group font-medium`}
+                                        >
+                                            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                                            Back to Library
+                                        </button>
+                                        <div className={`flex items-start justify-between ${classes.surface} p-6 rounded-2xl border ${classes.border} shadow-sm`}>
+                                            <div>
+                                                <h2 className={`text-2xl md:text-3xl font-bold ${classes.textPrimary} mb-2`}>{selectedBook.title}</h2>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400 text-xs font-bold rounded">CLASS {selectedClass}</span>
+                                                    <span className={`${classes.textSecondary} text-sm`}>NCERT Official Edition</span>
+                                                </div>
                                             </div>
-                                        </div>
                                         <div className={`hidden md:block p-4 rounded-xl ${COLOR_MAP[selectedBook.cover]}`}>
                                             <Book className="w-8 h-8" />
                                         </div>
@@ -3947,8 +4029,8 @@
                                 </div>
 
                                 {/* Chapter List */}
-                                <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-                                    <div className="divide-y divide-gray-100">
+                                    <div className={`${classes.surface} rounded-2xl border ${classes.border} overflow-hidden shadow-sm`}>
+                                        <div className={`divide-y ${classes.border}`}>
                                         {Array.from({ length: getChapterCount(selectedBook) }, (_, i) => i + 1).map((chapterNum) => {
                                             const url = getChapterUrl(selectedBook.code, chapterNum);
 
@@ -3959,18 +4041,18 @@
                                                 : `Chapter ${chapterNum}`;
 
                                             return (
-                                                <div key={chapterNum} className="p-4 md:p-6 hover:bg-gray-50 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4 group">
+                                                <div key={chapterNum} className={`p-4 md:p-6 hover:${classes.actionHoverBg} transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4 group`}>
                                                     <div className="flex items-start md:items-center gap-4">
-                                                        <div className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0 rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center font-bold text-lg group-hover:bg-yellow-400 group-hover:text-red-900 transition-all duration-300">
+                                                        <div className={`w-10 h-10 md:w-12 md:h-12 flex-shrink-0 rounded-xl ${classes.surfaceHighlight} ${classes.textSecondary} flex items-center justify-center font-bold text-lg group-hover:bg-yellow-400 group-hover:text-red-900 transition-all duration-300`}>
                                                             {chapterNum}
                                                         </div>
                                                         <div>
-                                                            <h4 className="text-base md:text-lg font-bold text-gray-800 group-hover:text-red-700 transition-colors">
+                                                            <h4 className={`text-base md:text-lg font-bold ${classes.textPrimary} group-hover:text-red-700 dark:group-hover:text-red-400 transition-colors`}>
                                                                 {chapterName}
                                                             </h4>
                                                             {/* Subtitle logic: Show nothing if we don't have a real name (to avoid 'PDF Document' clutter) */}
                                                             {hasRealName && (
-                                                                <p className="text-xs md:text-sm text-gray-400 mt-1">
+                                                                 <p className={`text-xs md:text-sm ${classes.textMuted} mt-1`}>
                                                                     Chapter {chapterNum}
                                                                 </p>
                                                             )}
@@ -3983,7 +4065,7 @@
                                                             href={url}
                                                             target="_blank"
                                                             rel="noreferrer"
-                                                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:border-red-600 hover:text-red-700 transition-all"
+                                                            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 ${classes.surface} border ${classes.border} rounded-lg text-sm font-semibold ${classes.textSecondary} hover:border-red-600 hover:${classes.primaryText} transition-all`}
                                                         >
                                                             <ExternalLink className="w-4 h-4" />
                                                             View
@@ -4412,13 +4494,43 @@
             };
 
             return (
-                <div key={currentView} className="view-transition">
-                    {renderView()}
-                </div>
+                <>
+                    <div key={currentView} className="view-transition">
+                        {renderView()}
+                    </div>
+                    {/* Persistent Mind Map Iframe - Loaded in background */}
+                    <div 
+                        style={{ 
+                            display: currentView === 'mindmap' ? 'block' : 'none',
+                            position: 'fixed',
+                            top: '64px', // Height of the header (16 * 4px)
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            zIndex: 10,
+                            backgroundColor: '#fff' // Ensure background is white
+                        }}
+                    >
+                        <iframe
+                            src="https://aigeneratormind.netlify.app/"
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                border: 'none'
+                            }}
+                            title="AI Mind Map Generator"
+                            allowFullScreen
+                        />
+                    </div>
+                </>
             );
         }
 
         // Standard React initialization block
         const rootElement = document.getElementById('root');
         const root = ReactDOM.createRoot(rootElement);
-        root.render(<App />);
+        root.render(
+            <ThemeProvider>
+                <App />
+            </ThemeProvider>
+        );
