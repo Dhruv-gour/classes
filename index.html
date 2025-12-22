@@ -6,47 +6,7 @@
     <meta name="viewport"
         content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 
-    <!-- Force Mobile Layout on Desktop -->
-    <style>
-        /* Only apply on screens wider than a typical large mobile device */
-        @media screen and (min-width: 768px) {
-            body {
-                background-color: #111 !important;
-                /* Dark background for the 'letterbox' */
-                display: flex !important;
-                justify-content: center !important;
-                align-items: center !important;
-                min-height: 100vh !important;
-                margin: 0 !important;
-            }
 
-            #root {
-                width: 100% !important;
-                max-width: 480px !important;
-                /* Mobile width */
-                height: 100vh !important;
-                /* Full height */
-                max-height: 100vh !important;
-                background-color: #fff;
-                /* Ensure app has a background */
-                position: relative !important;
-                box-shadow: 0 0 50px rgba(0, 0, 0, 0.5) !important;
-                overflow: hidden !important;
-                /* Prevent scroll on the constrained root */
-            }
-
-            /* Ensure modals/fixed elements stay within the mobile frame */
-            .fixed {
-                position: absolute !important;
-                /* Changes fixed to absolute relative to #root */
-            }
-
-            /* Exception: If your toasts/modals use portals attached to body, they might need specific handling. 
-               However, 'absolute' usually works if they are inside #root. 
-               If they are direct children of body, we might need to constrain them too. 
-            */
-        }
-    </style>
     <meta name="screen-orientation" content="portrait">
     <meta name="orientation" content="portrait">
     <meta name="theme-color" content="#b91c1c">
