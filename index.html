@@ -652,6 +652,52 @@
         }
 
         /* Custom Notification Permission Modal */
+        /* Force Mobile App Feel */
+        html,
+        body {
+            background-color: #f9fafb;
+            /* Matches bg-gray-50 */
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+        }
+
+        /* Dark mode background match */
+        @media (prefers-color-scheme: dark) {
+
+            html,
+            body {
+                background-color: #111827;
+                /* Matches bg-gray-900 */
+            }
+        }
+
+        /* On larger screens (or desktop mode on mobile), center the app and constrain width */
+        @media screen and (min-width: 600px) {
+            #root {
+                max-width: 480px;
+                /* Mobile width constraint */
+                margin: 0 auto;
+                /* Center the app */
+                min-height: 100vh;
+                background-color: #fff;
+                /* App background */
+                box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+                /* Very subtle shadow */
+                position: relative;
+            }
+
+            /* Dark mode app background */
+            @media (prefers-color-scheme: dark) {
+                #root {
+                    background-color: #111827;
+                    /* Matches bg-gray-900 */
+                    box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+                }
+            }
+        }
+
         .notif-modal-overlay {
             position: fixed;
             top: 0;

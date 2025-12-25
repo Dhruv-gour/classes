@@ -1965,7 +1965,7 @@
                                         View all
                                     </button>
                                 </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div className="grid grid-cols-1 gap-4">
                                     <div
                                         onClick={onNavigateToLibrary}
                                         className="bg-gradient-to-br from-red-50 to-yellow-50 dark:from-red-900/20 dark:to-yellow-900/20 rounded-2xl border border-red-100 dark:border-red-900/30 p-4 hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-none hover:border-red-400 dark:hover:border-red-800 transition-all duration-300 cursor-pointer group relative overflow-hidden"
@@ -2044,7 +2044,7 @@
                                         View all
                                     </button>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 gap-4">
                                     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-all cursor-pointer group">
                                         <div className="aspect-video bg-gradient-to-br from-gray-100 dark:from-gray-700 to-gray-200 dark:to-gray-600 rounded-xl mb-3 flex items-center justify-center">
                                             <div className="w-16 h-16 bg-white/80 dark:bg-gray-800/80 rounded-full flex items-center justify-center">
@@ -3779,7 +3779,7 @@
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 gap-4">
                             {filteredFeatures.map((feature) => (
                                 <div
                                     key={feature.id}
@@ -3978,8 +3978,8 @@
                                     </div>
                                 </div>
 
-                                {/* Books Grid */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                                {/* Books Grid - Force Single Column for Mobile App Feel */ }
+                                <div className="grid grid-cols-1 gap-4 md:gap-6">
                                     {filteredBooks.map((book) => (
                                         <div
                                             key={book.code}
@@ -4175,7 +4175,7 @@
 
         // --- Main App Component (Router) ---
         // 🔧 TESTING MODE: Set to false to enable login page, true to skip login
-        const DISABLE_LOGIN_FOR_TESTING = false;
+        const DISABLE_LOGIN_FOR_TESTING = true;
 
         function App() {
             // Initialize view immediately - show login by default, auth check happens in background
