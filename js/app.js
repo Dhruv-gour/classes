@@ -4175,7 +4175,7 @@
 
         // --- Main App Component (Router) ---
         // 🔧 TESTING MODE: Set to false to enable login page, true to skip login
-        const DISABLE_LOGIN_FOR_TESTING = true;
+        const DISABLE_LOGIN_FOR_TESTING = false;
 
         function App() {
             // Initialize view immediately - show login by default, auth check happens in background
@@ -4534,3 +4534,4 @@
                 <App />
             </ThemeProvider>
         );
+
